@@ -2,7 +2,7 @@ services:
   - type: web
     name: dormshare-backend
     env: docker
-    dockerContext: dormshare-backend
+    dockerContext: dormshare_android/dormshare-backend
     dockerfilePath: Dockerfile
     plan: free
     envVars:
