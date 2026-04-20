@@ -628,7 +628,7 @@
                 
                 if (stompClient && stompClient.connected) {
                     stompClient.publish({
-                        destination: \`/app/chat.send\`,
+                        destination: `/app/chat.send`,
                         body: JSON.stringify({ transactionId: txnId, senderId: user.id, content: text, timestamp: Date.now().toString() })
                     });
                     i.value = '';
@@ -646,8 +646,8 @@
                 if(d.getTime() > 0) timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             }
             const div = document.createElement('div');
-            div.className = \`msg-bubble \${isMe ? 'msg-mine' : 'msg-theirs'}\`;
-            div.innerHTML = \`\${m.content} <var-time>\${timeStr}</var-time>\`;
+            div.className = `msg-bubble ${isMe ? 'msg-mine' : 'msg-theirs'}`;
+            div.innerHTML = `${m.content} <var-time>${timeStr}</var-time>`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
@@ -664,7 +664,7 @@
             stompClient.onConnect = function () {
                 const st = document.getElementById('ws-status');
                 if(st) { st.innerText = 'Connected E2E'; st.className = 'item-badge badge-avail'; }
-                stompClient.subscribe(\`/topic/messages/\${txnId}\`, (message) => {
+                stompClient.subscribe(`/topic/messages/${txnId}`, (message) => {
                     if (message.body) onMsgRecv(JSON.parse(message.body));
                 });
             };
@@ -678,7 +678,7 @@
         const mBody = document.getElementById('modal-content');
         
         function showModal(html) {
-            mBody.innerHTML = \`<button class="modal-close" onclick="hideModal()">×</button>\` + html;
+            mBody.innerHTML = `<button class="modal-close" onclick="hideModal()">×</button>` + html;
             mCont.style.display = 'flex';
         }
         window.hideModal = () => {
@@ -687,7 +687,7 @@
         }
 
         window.showAddModal = () => {
-            showModal(\`
+            showModal(`
                 <h2 style="font-size:28px; margin-bottom:8px;">Drop New Gear</h2>
                 <p style="color:var(--text-muted); font-weight:500; font-size:15px; margin-bottom:32px;">List premium campus gear for others to borrow.</p>
                 <div class="input-group"><label>Item Profile</label><input type="text" id="a-name" class="input-field" placeholder="E.g. Sony WH-1000XM5"></div>
@@ -700,7 +700,7 @@
                     </div>
                 </div>
                 <button class="btn btn-primary" style="width:100%; padding:18px; margin-top:16px;" onclick="doAddItem()">Publish Drop</button>
-            \`);
+            `);
         };
         
         window.doAddItem = async () => {
@@ -715,20 +715,20 @@
         };
 
         window.showQR = (txnId) => {
-            showModal(\`
+            showModal(`
                 <div style="text-align:center;">
                     <h2 style="font-size:28px; margin-bottom:8px;">Handoff Authorization</h2>
                     <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Present this to the borrower to finalize tracking.</p>
                     <div id="qr-canvas" style="background:white; padding:24px; border-radius:24px; display:inline-block; margin-bottom:24px; box-shadow:var(--shadow-premium);"></div>
-                    <div style="color:var(--accent-secondary); font-family:var(--font-display); font-size:24px; letter-spacing:4px; font-weight:800;">\${txnId.substring(0,8)}</div>
+                    <div style="color:var(--accent-secondary); font-family:var(--font-display); font-size:24px; letter-spacing:4px; font-weight:800;">${txnId.substring(0,8)}</div>
                 </div>
-            \`);
+            `);
             const qr = qrcode(0, 'H'); qr.addData(txnId); qr.make();
             document.getElementById('qr-canvas').innerHTML = qr.createImgTag(6);
         };
 
         window.showScanner = (txnId) => {
-            showModal(\`
+            showModal(`
                 <div style="text-align:center;">
                     <h2 style="font-size:28px; margin-bottom:8px;">Verify Intake</h2>
                     <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Scan the lender's device to release tokens.</p>
@@ -738,7 +738,7 @@
                         <button class="btn btn-primary" onclick="completeHandoff(document.getElementById('m-pin').value)">Verify</button>
                     </div>
                 </div>
-            \`);
+            `);
             window.qs = new Html5QrcodeScanner("reader-box", { fps: 10, qrbox: 200, disableFlip: false });
             window.qs.render(text => completeHandoff(text));
         };
