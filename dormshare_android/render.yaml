@@ -2,8 +2,8 @@ services:
   - type: web
     name: dormshare-backend
     env: docker
-    dockerContext: dormshare_android/dormshare-backend
-    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerfilePath: dormshare-backend/Dockerfile
     plan: free
     envVars:
       - key: SERVER_PORT
@@ -12,3 +12,5 @@ services:
         sync: false
       - key: SPRING_KAFKA_BOOTSTRAP_SERVERS
         value: localhost:9092
+      - key: SPRING_AUTOCONFIGURE_EXCLUDE
+        value: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration,org.springframework.boot.autoconfigure.kafka.KafkaPropertiesAutoConfiguration
