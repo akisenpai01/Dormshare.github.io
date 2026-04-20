@@ -105,8 +105,7 @@
             position: sticky; top: 0; z-index: 900;
             display: flex; justify-content: space-between; align-items: center;
             padding: 32px 6%;
-            background: var(--bg-color);
-            background-blur: 20px;
+            background: var(--surface-color);
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
         }
@@ -699,7 +698,7 @@
                 });
                 
                 grid.innerHTML = filtered.length === 0 ? '<p style="color:var(--text-muted); grid-column:1/-1;">No matching gear found.</p>' : filtered.map((i, idx) => `
-                    <div class="item-card ${idx===0 ? 'bento-featured' : ''}" onclick="window.location.hash='#/item/${i.id}'" style="opacity:0;">
+                    <div class="item-card ${idx===0 ? 'bento-featured' : ''}" onclick="window.location.hash='#/item/${i.id}'">
                         <div class="item-visual" style="background: ${i.imageUrl ? `url(${i.imageUrl})` : `linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color))`}; background-size: cover; background-position: center;">
                             <div class="item-badge badge-avail">${i.status}</div>
                         </div>
@@ -773,7 +772,7 @@
                 
                 <div class="bento-grid">
                     ${items.length === 0 ? '<p style="color:var(--text-muted);">You haven\'t listed any gear yet.</p>' : items.map(i => `
-                        <div class="item-card" onclick="if(!event.target.closest('.delete-btn')) window.location.hash='#/item/${i.id}'" style="opacity:0;">
+                        <div class="item-card" onclick="if(!event.target.closest('.delete-btn')) window.location.hash='#/item/${i.id}'">
                             <div class="item-visual" style="background: ${i.imageUrl ? `url(${i.imageUrl})` : `linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color))`}; background-size: cover;">
                                 <div class="item-badge ${i.status==='available'?'badge-avail':'badge-pend'}">${i.status}</div>
                                 ${i.status === 'available' ? `
