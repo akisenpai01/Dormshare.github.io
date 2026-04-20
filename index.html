@@ -242,7 +242,7 @@
 
     <!-- UI State and Global Store -->
     <script>
-        const BASE_URL = 'http://localhost:8080';
+        const BASE_URL = 'http://localhost:8082';
         let stompClient = null;
 
         const Store = {
@@ -657,7 +657,7 @@
             if(!window.StompJs) { setTimeout(() => connectChat(txnId, onMsgRecv), 100); return; }
 
             stompClient = new window.StompJs.Client({
-                brokerURL: 'ws://localhost:8080/ws-chat',
+                brokerURL: 'ws://localhost:8082/ws-chat',
                 connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt }
             });
 
