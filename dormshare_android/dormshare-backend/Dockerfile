@@ -1,7 +1,7 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS builder
 WORKDIR /app
-COPY dormshare-backend/pom.xml .
-COPY dormshare-backend/src ./src
+COPY dormshare_android/dormshare-backend/pom.xml .
+COPY dormshare_android/dormshare-backend/src ./src
 # Limit Maven memory to fit in Render's Free tier (512MB)
 RUN MAVEN_OPTS="-Xmx300m" mvn clean package -DskipTests
 

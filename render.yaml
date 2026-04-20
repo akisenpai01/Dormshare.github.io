@@ -3,7 +3,7 @@ services:
     name: dormshare-backend
     env: docker
     dockerContext: .
-    dockerfilePath: dormshare-backend/Dockerfile
+    dockerfilePath: dormshare_android/dormshare-backend/Dockerfile
     plan: free
     envVars:
       - key: SERVER_PORT
