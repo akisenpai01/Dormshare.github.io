@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: dormshare-backend
+    env: docker
+    dockerContext: dormshare_android/dormshare-backend
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /api/auth/signup
+    envVars:
+      - key: SERVER_PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false # Set this in Render dashboard (Atlas URI)
+      - key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092 # Kafka will be local to the container or external

@@ -1,15 +1,37 @@
-# Build folders
-build/
-bin/
-out/
-.gradle/
-.idea/
-.vscode/
-node_modules/
+# Java/Maven
 target/
 *.class
 *.jar
+*.war
+*.ear
+
+# Android
+.gradle/
+build/
+local.properties
 *.apk
 *.aab
-local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.nb-gradle/
+
+# OS/System
 .DS_Store
+Thumbs.db
+
+# Misc
+node_modules/
+dist/
+.env
+.log
