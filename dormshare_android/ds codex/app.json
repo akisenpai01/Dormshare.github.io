@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "DormShare",
+    "slug": "dormshare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "dormshare",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
+    "android": {
+      "package": "com.dormshare.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F6FF"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.dormshare.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "apiBaseUrl": "http://localhost:8080"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_market">
+
+    <fragment
+        android:id="@+id/nav_market"
+        android:name="com.dormshare.app.fragments.MarketFragment"
+        android:label="Explore"
+        tools:layout="@layout/fragment_market" />
+
+    <fragment
+        android:id="@+id/nav_profile"
+        android:name="com.dormshare.app.fragments.ProfileFragment"
+        android:label="Lending"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/nav_history"
+        android:name="com.dormshare.app.fragments.HistoryFragment"
+        android:label="Activity"
+        tools:layout="@layout/fragment_history" />
+
+    <fragment
+        android:id="@+id/nav_handoff"
+        android:name="com.dormshare.app.fragments.MarketFragment" 
+        android:label="Handoff"
+        tools:layout="@layout/activity_verify" />
+
+</navigation>
