@@ -19,6 +19,12 @@ import java.util.Optional;
 @RequestMapping("/api/transactions")
 public class TransactionController {
     @Autowired
+    TransactionRepository transactionRepository;
+
+    @Autowired
+    ItemRepository itemRepository;
+
+    @Autowired
     UserRepository userRepository;
 
     @Autowired

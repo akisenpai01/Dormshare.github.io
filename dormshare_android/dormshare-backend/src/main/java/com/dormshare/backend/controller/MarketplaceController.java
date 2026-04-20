@@ -13,6 +13,9 @@ import java.util.List;
 @RequestMapping("/api/market")
 public class MarketplaceController {
     @Autowired
+    ItemRepository itemRepository;
+
+    @Autowired
     UserRepository userRepository;
 
     @Autowired
