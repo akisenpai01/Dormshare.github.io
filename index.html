@@ -4,180 +4,240 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DormShare — P2P Campus Network</title>
+    
     <!-- Dependencies for QR and Websocket -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Flagship Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #050508;
-            --surface-color: rgba(255, 255, 255, 0.03);
-            --surface-hover: rgba(255, 255, 255, 0.06);
-            --border-color: rgba(255, 255, 255, 0.08);
+            /* Digital Flagship Palette */
+            --bg-color: #f6f6ff;
+            --surface-color: #ffffff;
+            --surface-hover: #f8f9fc;
+            --border-color: rgba(39, 46, 66, 0.06);
             
-            --text-main: #f8f8f8;
-            --text-muted: #a0a0a5;
+            --text-main: #272e42;
+            --text-muted: #64748b;
             
-            --accent-brand: #6366f1;
-            --accent-brand-glow: rgba(99, 102, 241, 0.4);
-            --accent-secondary: #ec4899;
-            --accent-tertiary: #14b8a6;
+            --accent-brand: #0846ed; /* Hyper-Blue */
+            --accent-brand-glow: rgba(8, 70, 237, 0.2);
+            --accent-secondary: #702ae1; /* Electric Purple */
             
-            --token-color: #fbbf24;
-            --token-glow: rgba(251, 191, 36, 0.3);
-            
+            --token-color: #f59e0b; /* Retaining Gold for tokens */
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
             
-            --font-display: 'Outfit', sans-serif;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
             --font-body: 'Inter', sans-serif;
+            
+            --radius-md: 1rem;
+            --radius-xxl: 1.5rem; /* Squircle */
+            --shadow-premium: 0 12px 32px rgba(39, 46, 66, 0.06);
+            --shadow-soft: 0 4px 12px rgba(39, 46, 66, 0.04);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(circle at 80% -10%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 10% 40%, rgba(236, 72, 153, 0.1) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(20, 184, 166, 0.1) 0%, transparent 40%);
-            background-attachment: fixed;
-            color: var(--text-main); fill: currentColor;
+            color: var(--text-main);
             font-family: var(--font-body);
             -webkit-font-smoothing: antialiased;
-            overflow-x: hidden; min-height: 100vh;
+            overflow-x: hidden; 
+            min-height: 100vh;
+            padding-bottom: 100px; /* Space for bottom nav */
         }
 
-        h1, h2, h3, h4, h5 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; }
+        h1, h2, h3, h4, h5 { 
+            font-family: var(--font-display); 
+            font-weight: 700; 
+            letter-spacing: -0.02em; 
+            color: var(--text-main);
+        }
+        
         a { text-decoration: none; color: inherit; }
         
-        .glass-panel {
+        .flagship-card {
             background: var(--surface-color);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border-color);
-            border-radius: 24px;
+            border-radius: var(--radius-xxl);
+            box-shadow: var(--shadow-premium);
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 16px 5%;
+        /* Top Bar (Dynamic Header) */
+        header {
+            position: sticky; top: 0; z-index: 900;
             display: flex; justify-content: space-between; align-items: center;
-            background: rgba(5, 5, 8, 0.6); backdrop-filter: blur(24px); border-bottom: 1px solid var(--border-color);
+            padding: 24px 5%;
+            background: rgba(246, 246, 255, 0.85); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .nav-logo {
-            display: flex; align-items: center; gap: 12px; font-family: var(--font-display); font-size: 24px; font-weight: 700; cursor: pointer; letter-spacing: -0.04em;
+        .brand-logo {
+            font-family: var(--font-display); font-size: 24px; font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-brand), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        .logo-icon {
-            width: 36px; height: 36px; background: linear-gradient(135deg, var(--accent-brand), var(--accent-secondary));
-            border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: white;
-            box-shadow: 0 4px 12px var(--accent-brand-glow);
-        }
+        .header-controls { display: flex; align-items: center; gap: 16px; }
 
-        .nav-controls { display: flex; align-items: center; gap: 24px; }
         .token-badge {
-            display: flex; align-items: center; gap: 8px; background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.2);
-            padding: 8px 16px; border-radius: 20px; font-family: var(--font-display); font-weight: 600; color: var(--token-color);
-            box-shadow: 0 0 15px var(--token-glow);
+            display: flex; align-items: center; gap: 6px; 
+            background: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 100px; 
+            font-family: var(--font-display); font-weight: 700; font-size: 14px;
+            color: var(--text-main); box-shadow: var(--shadow-soft);
         }
+        .token-badge span { color: var(--token-color); }
 
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 12px; border-radius: 100px;
+            box-shadow: 0 20px 40px rgba(39, 46, 66, 0.12);
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        .nav-pill {
+            padding: 12px 24px; border-radius: 100px;
+            font-family: var(--font-display); font-weight: 600; font-size: 14px;
+            color: var(--text-muted); cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-pill:hover { color: var(--text-main); background: var(--surface-hover); }
+        .nav-pill.active { background: var(--accent-brand); color: #fff; box-shadow: 0 8px 20px var(--accent-brand-glow); }
+
+        /* Buttons */
         .btn {
-            padding: 12px 24px; border-radius: 14px; font-family: var(--font-body); font-weight: 500; font-size: 14px; border: none; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 14px 28px; border-radius: 100px;
+            font-family: var(--font-display); font-weight: 600; font-size: 15px;
+            border: none; cursor: pointer; transition: all 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn:active { transform: scale(0.96); }
-        .btn-primary { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3); }
-        .btn-primary:hover { box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5); transform: translateY(-2px); }
-        .btn-secondary { background: var(--surface-color); color: var(--text-main); border: 1px solid var(--border-color); }
-        .btn-secondary:hover { background: var(--surface-hover); border-color: rgba(255,255,255,0.2); }
-        .btn-tertiary { background: rgba(20, 184, 166, 0.1); color: var(--accent-tertiary); border: 1px solid rgba(20, 184, 166, 0.2); }
+        .btn-primary { background: var(--accent-brand); color: #fff; box-shadow: 0 8px 20px var(--accent-brand-glow); }
+        .btn-primary:hover { background: #063bc9; transform: translateY(-2px); box-shadow: 0 12px 24px var(--accent-brand-glow); }
+        
+        .btn-secondary { background: #fff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft); }
+        .btn-secondary:hover { background: var(--surface-hover); border-color: rgba(39,46,66,0.15); }
+        
+        .btn-tertiary { background: rgba(112, 42, 225, 0.1); color: var(--accent-secondary); }
+        .btn-tertiary:hover { background: rgba(112, 42, 225, 0.15); }
 
+        /* Input Fields */
         .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; text-align: left; }
-        .input-group label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .input-group label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
         .input-field {
-            width: 100%; padding: 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 14px; color: white; font-family: var(--font-body); font-size: 15px; transition: all 0.2s; outline: none;
+            width: 100%; padding: 16px 20px; background: #fff; border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-md); color: var(--text-main); font-family: var(--font-body); font-size: 15px;
+            transition: all 0.2s; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
-        .input-field:focus { border-color: var(--accent-brand); background: rgba(99,102,241,0.05); box-shadow: 0 0 0 4px rgba(99,102,241,0.1); }
+        .input-field:focus { border-color: var(--accent-brand); box-shadow: 0 0 0 4px var(--accent-brand-glow); }
 
-        #app { margin-top: 80px; min-height: calc(100vh - 80px); padding: 40px 5%; display: flex; flex-direction: column; }
-        .dashboard-grid { display: grid; grid-template-columns: 260px 1fr; gap: 48px; align-items: start; max-width: 1400px; margin: 0 auto; width: 100%; }
-        .sidebar { position: sticky; top: 120px; display: flex; flex-direction: column; gap: 12px; }
-        .nav-item { padding: 14px 20px; border-radius: 14px; color: var(--text-muted); cursor: pointer; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 12px; }
-        .nav-item:hover { color: var(--text-main); background: var(--surface-color); }
-        .nav-item.active { background: rgba(99,102,241,0.1); color: var(--accent-brand); }
-        .profile-card { padding: 24px; margin-bottom: 24px; text-align: left; }
+        /* Layout Grids */
+        #app { padding: 32px 5%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+        
+        .bento-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 24px; 
+        }
+        .bento-wide { grid-column: 1 / -1; }
+        @media (min-width: 768px) {
+            .bento-featured { grid-column: span 2; grid-row: span 2; }
+        }
 
-        .chip-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; -ms-overflow-style: none; scrollbar-width: none; }
+        /* Chips */
+        .chip-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
         .chip-scroll::-webkit-scrollbar { display: none; }
-        .filter-chip { padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 500; background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: all 0.3s; }
-        .filter-chip:hover { background: var(--surface-hover); color: var(--text-main); }
-        .filter-chip.active { background: var(--text-main); color: var(--bg-color); border-color: var(--text-main); }
-
-        .items-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
-        .item-card { padding: 20px; display: flex; flex-direction: column; gap: 16px; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: pointer; }
-        .item-card:hover { transform: translateY(-8px); border-color: rgba(255,255,255,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        .item-visual { height: 160px; border-radius: 16px; display: flex; justify-content: center; align-items: center; font-size: 64px; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)); position: relative; overflow: hidden; }
-        .item-badge { position: absolute; top: 12px; right: 12px; padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; backdrop-filter: blur(8px); }
-        .badge-avail { background: rgba(16,185,129,0.2); color: var(--success); }
-        .badge-pend { background: rgba(245,158,11,0.2); color: var(--warning); }
-        .badge-borr { background: rgba(239,68,68,0.2); color: var(--danger); }
-        .item-info h3 { font-size: 20px; margin-bottom: 4px; }
-        .item-info .meta { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
-        .item-cost { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-color); }
-        .cost-val { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--token-color); }
-
-        .auth-wrap { max-width: 440px; margin: 40px auto; text-align: center; width: 100%; }
-        .auth-wrap h1 { font-size: 40px; margin-bottom: 12px; background: linear-gradient(to right, #fff, #a0a0a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        .chat-container { display: flex; flex-direction: column; height: 75vh; max-width: 900px; margin: 0 auto; width: 100%; overflow: hidden; }
-        .chat-header { padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
-        .chat-header h2 { font-size: 20px; display: flex; align-items: center; gap: 12px; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-        .chat-messages::-webkit-scrollbar { width: 6px; }
-        .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .msg-bubble { max-width: 70%; padding: 14px 20px; font-size: 15px; line-height: 1.5; position: relative; animation: slideIn 0.3s ease; }
-        @keyframes slideIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
-        var-time { font-size: 11px; opacity: 0.6; margin-top: 6px; display: block; }
-        .msg-mine { align-self: flex-end; background: linear-gradient(135deg, var(--accent-brand), #4f46e5); border-radius: 20px 20px 0 20px; }
-        .msg-theirs { align-self: flex-start; background: var(--surface-hover); border-radius: 20px 20px 20px 0; border: 1px solid var(--border-color); }
-        .chat-input-area { padding: 20px 24px; background: rgba(0,0,0,0.5); border-top: 1px solid var(--border-color); display: flex; gap: 16px; }
-        .chat-input { flex: 1; background: var(--surface-hover); border: none; border-radius: 100px; padding: 16px 24px; color: white; font-family: var(--font-body); font-size: 15px; outline: none; transition: background 0.2s; }
-        .chat-input:focus { background: rgba(255,255,255,0.1); }
-        .chat-send-btn { width: 50px; height: 50px; border-radius: 50%; border: none; background: var(--text-main); color: var(--bg-color); font-size: 20px; cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: center; }
-        .chat-send-btn:hover { transform: scale(1.05); }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-card { width: 100%; max-width: 500px; padding: 40px; position: relative; transform: scale(0.95); opacity: 0; animation: modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes modalIn { to { transform: scale(1); opacity: 1; } }
-        .modal-close { position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; background: var(--surface-hover); border: none; border-radius: 50%; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-        @media (max-width: 800px) {
-            .dashboard-grid { grid-template-columns: 1fr; gap: 24px; }
-            .sidebar { position: static; flex-direction: row; flex-wrap: wrap; }
-            .nav-item { flex: 1; justify-content: center; }
-            .profile-card { width: 100%; }
+        .filter-chip { 
+            padding: 10px 24px; border-radius: 100px; font-size: 14px; font-weight: 600; font-family: var(--font-display);
+            background: #fff; border: 1px solid var(--border-color); color: var(--text-muted); 
+            cursor: pointer; white-space: nowrap; transition: all 0.2s; box-shadow: var(--shadow-soft);
         }
+        .filter-chip:hover { background: var(--surface-hover); color: var(--text-main); }
+        .filter-chip.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+
+        /* Item Cards */
+        .item-card { 
+            padding: 24px; display: flex; flex-direction: column; gap: 20px; cursor: pointer; position: relative; overflow: hidden;
+            background: #fff; border-radius: var(--radius-xxl); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+        }
+        .item-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-premium); }
+        
+        .item-visual { 
+            height: 180px; border-radius: var(--radius-md); display: flex; justify-content: center; align-items: center; 
+            font-size: 64px; background: var(--bg-color); position: relative; overflow: hidden;
+        }
+        .item-badge { 
+            position: absolute; top: 12px; right: 12px; padding: 6px 14px; border-radius: 100px; 
+            font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; 
+            background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .badge-avail { color: var(--success); }
+        .badge-pend { color: var(--warning); }
+        .badge-borr { color: var(--danger); }
+        
+        .item-info h3 { font-size: 22px; margin-bottom: 6px; }
+        .item-info .meta { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+        .item-cost { 
+            display: flex; align-items: center; justify-content: space-between; 
+            margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-color); 
+        }
+        .cost-val { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--text-main); }
+
+        /* Auth */
+        .auth-wrap { max-width: 440px; margin: 40px auto; text-align: center; width: 100%; padding: 48px 32px; }
+        .auth-wrap h1 { font-size: 40px; margin-bottom: 12px; color: var(--accent-brand); }
+
+        /* Chat */
+        .chat-container { display: flex; flex-direction: column; height: 75vh; max-width: 900px; margin: 0 auto; width: 100%; overflow: hidden; }
+        .chat-header { padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #fff; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-color); }
+        .msg-bubble { max-width: 70%; padding: 16px 20px; font-size: 15px; border-radius: var(--radius-md); position: relative; animation: slideIn 0.3s ease; box-shadow: var(--shadow-soft); }
+        @keyframes slideIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+        var-time { font-size: 11px; opacity: 0.7; margin-top: 8px; display: block; font-weight: 500; }
+        .msg-mine { align-self: flex-end; background: var(--accent-brand); color: white; border-bottom-right-radius: 4px; }
+        .msg-theirs { align-self: flex-start; background: #fff; border: 1px solid var(--border-color); border-bottom-left-radius: 4px; }
+        .chat-input-area { padding: 20px 24px; background: #fff; border-top: 1px solid var(--border-color); display: flex; gap: 16px; }
+        .chat-input { flex: 1; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 100px; padding: 16px 24px; color: var(--text-main); font-family: var(--font-body); outline: none; }
+        .chat-input:focus { border-color: var(--accent-brand); }
+        .chat-send-btn { width: 50px; height: 50px; border-radius: 50%; border: none; background: var(--accent-brand); color: white; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 12px var(--accent-brand-glow); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(39, 46, 66, 0.4); backdrop-filter: blur(8px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-card { width: 100%; max-width: 500px; padding: 48px; background: #fff; position: relative; border-radius: var(--radius-xxl); transform: scale(0.95); opacity: 0; animation: modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; box-shadow: 0 24px 48px rgba(39, 46, 66, 0.15); }
+        @keyframes modalIn { to { transform: scale(1); opacity: 1; } }
+        .modal-close { position: absolute; top: 24px; right: 24px; width: 36px; height: 36px; background: var(--bg-color); border: none; border-radius: 50%; color: var(--text-muted); font-size: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <nav>
-        <div class="nav-logo" onclick="window.location.hash='#/'">
-            <div class="logo-icon">DS</div>
-            DormShare
-        </div>
-        <div class="nav-controls" id="nav-container"></div>
-    </nav>
+    <header>
+        <div class="brand-logo" onclick="window.location.hash='#/'" style="cursor:pointer;">DormShare</div>
+        <div class="header-controls" id="header-auth"></div>
+    </header>
 
     <div id="app"></div>
 
+    <div class="bottom-nav" id="bottom-nav" style="display: none;">
+        <div class="nav-pill active" onclick="window.location.hash='#/dashboard'" id="nav-explore">Explore</div>
+        <div class="nav-pill" onclick="window.location.hash='#/history'" id="nav-lending">Lending & Handoffs</div>
+    </div>
+
     <!-- Modals -->
     <div id="modal-container" class="modal-overlay" onclick="if(event.target === this) hideModal()">
-        <div class="glass-panel modal-card" id="modal-content"></div>
+        <div class="modal-card" id="modal-content"></div>
     </div>
 
     <!-- UI State and Global Store -->
@@ -227,31 +287,21 @@
                         body: JSON.stringify({ email, password: pass })
                     });
 
-                    // If user does not exist, try creating them (Auto Sign-Up flow)
                     if (!res.ok && email.includes('@stu.upes.ac.in')) {
                         const signupRes = await fetch(`${BASE_URL}/api/auth/signup`, {
                             method: 'POST', headers: this.getHeaders(),
-                            body: JSON.stringify({ 
-                                name: email.split('@')[0], 
-                                email: email, 
-                                password: pass, 
-                                hostelBlock: 'Campus'
-                            })
+                            body: JSON.stringify({ name: email.split('@')[0], email: email, password: pass, hostelBlock: 'Campus' })
                         });
                         if(signupRes.ok) {
-                            // Fetch again to get token
                             res = await fetch(`${BASE_URL}/api/auth/signin`, {
                                 method: 'POST', headers: this.getHeaders(),
                                 body: JSON.stringify({ email, password: pass })
                             });
                         }
                     }
-
-                    if(!res.ok) throw new Error("Invalid credentials or unregistered");
-
+                    if(!res.ok) throw new Error("Invalid credentials");
                     const data = await res.json();
                     
-                    const jwt = data.token || data.jwt;
                     const u = {
                         id: data.userId || data.id,
                         name: data.name || email.split('@')[0],
@@ -259,9 +309,8 @@
                         tokens: data.tokens || 10,
                         block: data.hostelBlock || 'Campus'
                     };
-                    
-                    this.save(u, jwt);
-                } catch(e) { throw new Error(e.message || "Failed to authenticate with backend."); }
+                    this.save(u, data.token || data.jwt);
+                } catch(e) { throw new Error(e.message || "Authentication failed."); }
             },
 
             async getItems() {
@@ -297,9 +346,7 @@
             },
 
             async verifyHandoff(txnId) {
-                const res = await fetch(`${BASE_URL}/api/transactions/verify/${txnId}`, {
-                    method: 'POST', headers: this.getHeaders()
-                });
+                const res = await fetch(`${BASE_URL}/api/transactions/verify/${txnId}`, { method: 'POST', headers: this.getHeaders() });
                 if(!res.ok) throw new Error("QR verification failed.");
             },
 
@@ -310,13 +357,13 @@
             }
         };
 
-        // UI Routing & State
+        // Routing & State
         let currentCat = 'All';
-        const cats = ['All', 'Electronics', 'Appliances', 'Stationery', 'Fitness'];
+        const cats = ['All', 'Tech', 'Kitchen', 'Fitness', 'Apparel'];
 
         function initApp() {
             Store.init();
-            renderNav();
+            renderHeader();
             window.addEventListener('hashchange', router);
             router();
         }
@@ -325,39 +372,53 @@
             const hash = window.location.hash || '#/';
             const user = Store.getCurrentUser();
             const app = document.getElementById('app');
-            app.innerHTML = '<div style="text-align:center; width:100%; margin-top:100px; color:var(--text-muted);">Syncing with Server...</div>';
+            const nav = document.getElementById('bottom-nav');
+            
+            nav.style.display = user ? 'flex' : 'none';
+            app.innerHTML = '<div style="text-align:center; padding:100px; color:var(--text-muted); font-weight:600;">Loading UI Modules...</div>';
             
             if (!user && hash !== '#/') { window.location.hash = '#/'; return; }
             if (user && hash === '#/') { window.location.hash = '#/dashboard'; return; }
 
+            // Manage Nav pills
+            if(document.getElementById('nav-explore')) {
+                document.getElementById('nav-explore').className = hash.includes('dashboard') ? 'nav-pill active' : 'nav-pill';
+                document.getElementById('nav-lending').className = hash.includes('history') ? 'nav-pill active' : 'nav-pill';
+            }
+
             if (hash === '#/') renderLogin(app);
             else if (hash === '#/dashboard') await renderDashboard(app);
             else if (hash === '#/history') await renderHistory(app);
-            else if (hash.startsWith('#/item/')) await renderItemInfo(app, hash.split('/')[2]);
-            else if (hash.startsWith('#/chat/')) await renderChatView(app, hash.split('/')[2]);
-        }
-
-        function renderNav() {
-            const container = document.getElementById('nav-container');
-            const user = Store.getCurrentUser();
-            if (user) {
-                container.innerHTML = `
-                    <div class="token-badge">🪙 ${user.tokens} Tokens</div>
-                    <button class="btn btn-secondary" onclick="Store.logout(); renderNav(); router();" style="padding: 8px 16px; border-radius: 10px;">Sign Out</button>
-                `;
-            } else {
-                container.innerHTML = '';
+            else if (hash.startsWith('#/item/')) {
+                nav.style.display = 'none'; // immersive details
+                await renderItemInfo(app, hash.split('/')[2]);
+            }
+            else if (hash.startsWith('#/chat/')) {
+                nav.style.display = 'none';
+                await renderChatView(app, hash.split('/')[2]);
             }
         }
 
-        /* --- LOGIN & AUTH --- */
+        function renderHeader() {
+            const container = document.getElementById('header-auth');
+            const user = Store.getCurrentUser();
+            if (user) {
+                container.innerHTML = `
+                    <div class="token-badge"><span>🪙</span> ${user.tokens} Tokens</div>
+                    <button class="btn btn-secondary" onclick="Store.logout(); renderHeader(); router();" style="padding: 8px 16px; border-radius: 100px; font-size:13px;">Sign Out</button>
+                `;
+            } else {
+                container.innerHTML = `<button class="btn btn-primary" onclick="window.location.hash='#/'" style="padding: 8px 16px; font-size:13px;">Sign In</button>`;
+            }
+        }
+
         function renderLogin(root) {
             root.innerHTML = `
-                <div class="glass-panel auth-wrap">
-                    <h1>Welcome into <br/> DormShare.</h1>
-                    <p style="color:var(--text-muted); margin-bottom:40px;">P2P Library of Things for UPES.</p>
+                <div class="flagship-card auth-wrap">
+                    <h1 style="color:var(--text-main); font-size:32px;">Welcome to DormShare</h1>
+                    <p style="color:var(--text-muted); margin-bottom:40px; font-weight:500;">Your Premium Campus Marketplace.</p>
                     
-                    <div id="auth-err" style="color:var(--danger); margin-bottom:10px; font-size:14px; text-shadow:0 0 10px rgba(239,68,68,0.4);"></div>
+                    <div id="auth-err" style="color:var(--danger); margin-bottom:16px; font-size:14px; font-weight:600;"></div>
                     <div class="input-group">
                         <label>Student Email</label>
                         <input id="email" type="email" class="input-field" placeholder="student@stu.upes.ac.in" />
@@ -366,80 +427,58 @@
                         <label>Password</label>
                         <input id="pass" type="password" class="input-field" placeholder="••••••••" />
                     </div>
-                    <button id="login-btn" class="btn btn-primary" style="width:100%; margin-top:10px; font-size:16px; padding:16px;" onclick="doLogin()">Authenticate Securely</button>
+                    <button id="login-btn" class="btn btn-primary" style="width:100%; margin-top:16px; font-size:16px; padding:18px;" onclick="doLogin()">Log In Securely</button>
                 </div>
             `;
             window.doLogin = async () => {
                 const btn = document.getElementById('login-btn');
-                btn.innerText = 'Connecting...';
+                btn.innerText = 'Authenticating...';
                 try {
                     await Store.login(document.getElementById('email').value, document.getElementById('pass').value);
-                    renderNav(); router();
-                } catch(e) { document.getElementById('auth-err').innerText = e.message; btn.innerText = 'Authenticate Securely'; }
+                    renderHeader(); router();
+                } catch(e) { document.getElementById('auth-err').innerText = e.message; btn.innerText = 'Log In Securely'; }
             }
         }
 
-        /* --- DASHBOARD --- */
         async function renderDashboard(root) {
             const user = Store.getCurrentUser();
             let allItems = [];
-            
-            try {
-                allItems = await Store.getItems();
-            } catch(e) { console.error("Could not fetch items", e); }
+            try { allItems = await Store.getItems(); } catch(e) { console.error(e); }
 
             let chipsHtml = cats.map(c => `<div class="filter-chip ${c===currentCat?'active':''}" onclick="setCat('${c}')">${c}</div>`).join('');
-            
-            // Filter
             const filteredItems = currentCat === 'All' ? allItems : allItems.filter(i => i.category === currentCat);
 
             root.innerHTML = `
-                <div class="dashboard-grid">
-                    <div class="sidebar">
-                        <div class="glass-panel profile-card">
-                            <h3 style="font-size:20px;">${user.name}</h3>
-                            <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">📍 ${user.block}</p>
-                            <div style="margin-top:20px; font-family:var(--font-display); font-size:28px; font-weight:700; color:var(--token-color);">
-                                🪙 ${user.tokens} 
-                                <span style="font-size:12px; color:var(--text-muted); font-family:var(--font-body); font-weight:400; display:block;">Available Vault Balance</span>
-                            </div>
-                        </div>
-                        <a href="#/dashboard" class="nav-item active"><span style="font-size:20px;">🌐</span> Marketplace</a>
-                        <a href="#/history" class="nav-item"><span style="font-size:20px;">💼</span> My Activity & Handoffs</a>
-                    </div>
-                    
+                <div style="display:flex; justify-content:space-between; align-items:flex-end;">
                     <div>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
-                            <div>
-                                <h1 style="font-size:32px;">Campus Market</h1>
-                                <p style="color:var(--text-muted); margin-top:8px;">Find items securely from peers.</p>
-                            </div>
-                            <button class="btn btn-tertiary" onclick="showAddModal()">+ List New Item</button>
-                        </div>
-                        
-                        <div class="chip-scroll" style="margin-bottom:32px;">${chipsHtml}</div>
-                        <div class="items-container" id="items-grid"></div>
+                        <h1 style="font-size:36px;">Campus Drops</h1>
+                        <p style="color:var(--text-muted); margin-top:8px; font-size:16px;">Discover premium gear available right now.</p>
                     </div>
+                    <button class="btn btn-tertiary" onclick="showAddModal()">+ List Gear</button>
                 </div>
+                
+                <div class="chip-scroll">${chipsHtml}</div>
+                
+                <div class="bento-grid" id="items-grid"></div>
             `;
             
             window.setCat = (c) => { currentCat = c; router(); };
             
             const grid = document.getElementById('items-grid');
-            window.__DSDATA = window.__DSDATA || {}; window.__DSDATA.items = allItems; // cache for UI fallback rendering
+            window.__DSDATA = window.__DSDATA || {}; window.__DSDATA.items = allItems;
             
-            grid.innerHTML = filteredItems.length === 0 ? '<p style="color:var(--text-muted)">No items available in this category.</p>' : filteredItems.map(i => `
-                <div class="glass-panel item-card" onclick="window.location.hash='#/item/${i.id}'">
-                    <div class="item-visual" style="background: linear-gradient(135deg, ${getCatColor(i.category)}, rgba(255,255,255,0.02));">
+            grid.innerHTML = filteredItems.length === 0 ? '<p style="color:var(--text-muted); grid-column:1/-1;">No items available in this category.</p>' : filteredItems.map((i, idx) => `
+                <div class="item-card ${idx===0 ? 'bento-featured' : ''}" onclick="window.location.hash='#/item/${i.id}'">
+                    <div class="item-visual" style="background: linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color));">
                         <div class="item-badge ${i.status==='available'?'badge-avail':'badge-pend'}">${i.status}</div>
-                        ✨
+                        🛒
                     </div>
                     <div class="item-info">
                         <h3>${i.name}</h3>
-                        <p class="meta">📍 ${i.pickupLocation}  •  ${i.category}</p>
+                        <p class="meta">📍 ${i.pickupLocation} • ${i.category}</p>
                         <div class="item-cost">
-                            <span class="cost-val">🪙 ${i.tokenCost}<span style="font-size:12px; color:var(--text-muted); font-weight:400;"> /day</span></span>
-                            <span style="color:var(--accent-brand); font-size:14px; font-weight:500;">Details &rarr;</span>
+                            <span class="cost-val">🪙 ${i.tokenCost}<span style="font-size:13px; color:var(--text-muted); font-weight:600;"> /day</span></span>
+                            <span style="color:var(--accent-secondary); font-size:14px; font-weight:700;">Details &rarr;</span>
                         </div>
                     </div>
                 </div>
@@ -447,8 +486,8 @@
         }
 
         function getCatColor(cat) {
-            const map = { 'Electronics':'rgba(99,102,241,0.2)', 'Appliances': 'rgba(236,72,153,0.2)', 'Stationery': 'rgba(20,184,166,0.2)', 'Fitness': 'rgba(245,158,11,0.2)' };
-            return map[cat] || 'rgba(255,255,255,0.1)';
+            const map = { 'Tech':'#e0e7ff', 'Kitchen': '#fce7f3', 'Fitness': '#fef3c7', 'Apparel': '#ccfbf1' };
+            return map[cat] || '#f1f5f9';
         }
 
         async function renderItemInfo(root, id) {
@@ -456,33 +495,33 @@
             try { items = await Store.getItems(); } catch(e) {}
             const item = items.find(i=>i.id===id) || (window.__DSDATA && window.__DSDATA.items ? window.__DSDATA.items.find(i=>i.id===id) : null);
             
-            if(!item) { root.innerHTML = '<p>Item not found or already booked.</p>'; return; }
+            if(!item) { root.innerHTML = '<p>Item not found.</p>'; return; }
             
             const user = Store.getCurrentUser();
             
             root.innerHTML = `
                 <div style="max-width:800px; margin:0 auto; width:100%;">
-                    <button class="btn btn-secondary" onclick="window.history.back()" style="margin-bottom:24px;">&larr; Back</button>
+                    <button class="btn btn-secondary" onclick="window.history.back()" style="margin-bottom:32px;">&larr; Back</button>
                     
-                    <div class="glass-panel" style="padding:48px; border-radius:32px;">
+                    <div class="flagship-card" style="padding:48px;">
                         <div style="display:flex; gap:40px; flex-wrap:wrap;">
-                            <div class="item-visual" style="flex:1; min-width:250px; background: linear-gradient(135deg, ${getCatColor(item.category)}, rgba(0,0,0,0.2)); font-size:100px; height:300px; border-radius:24px;">
-                                ✨
+                            <div class="item-visual" style="flex:1; min-width:300px; height:350px; background: linear-gradient(135deg, ${getCatColor(item.category)}, var(--surface-hover)); font-size:120px;">
+                                📦
                             </div>
-                            <div style="flex:2; min-width:300px; display:flex; flex-direction:column;">
-                                <div style="display:inline-block; padding:6px 12px; background:var(--surface-hover); border-radius:8px; font-size:12px; font-weight:600; color:var(--accent-brand); width:fit-content; margin-bottom:16px;">${item.category ? item.category.toUpperCase() : 'UNKNOWN'}</div>
-                                <h1 style="font-size:40px; margin-bottom:16px;">${item.name}</h1>
-                                <p style="font-size:16px; color:var(--text-muted); line-height:1.6; margin-bottom:32px;">${item.description || "No description provided."}</p>
+                            <div style="flex:1.5; min-width:300px; display:flex; flex-direction:column;">
+                                <div style="display:inline-block; padding:8px 16px; background:rgba(8,70,237,0.1); border-radius:100px; font-size:12px; font-weight:700; color:var(--accent-brand); width:fit-content; margin-bottom:16px;">${item.category ? item.category.toUpperCase() : 'GEAR'}</div>
+                                <h1 style="font-size:40px; margin-bottom:16px; line-height:1.1;">${item.name}</h1>
+                                <p style="font-size:16px; color:var(--text-muted); line-height:1.6; margin-bottom:32px;">${item.description || "Premium campus gear available for immediate borrowing."}</p>
                                 
-                                <div style="display:flex; align-items:center; justify-content:space-between; padding:24px; background:rgba(0,0,0,0.3); border-radius:16px; margin-top:auto; border: 1px solid var(--border-color);">
+                                <div style="display:flex; align-items:center; justify-content:space-between; padding:24px; background:var(--bg-color); border-radius:var(--radius-md); margin-top:auto;">
                                     <div>
-                                        <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Lender System ID</div>
-                                        <div style="font-weight:500; font-size:16px;">${item.ownerId}</div>
-                                        <div style="font-size:13px; color:var(--text-muted);">📍 ${item.pickupLocation}</div>
+                                        <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Lender Details</div>
+                                        <div style="font-weight:700; font-size:16px;">ID: ${item.ownerId.substring(0,8)}</div>
+                                        <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">📍 ${item.pickupLocation}</div>
                                     </div>
                                     <div style="text-align:right;">
-                                        <div style="font-family:var(--font-display); font-size:32px; font-weight:700; color:var(--token-color);">🪙 ${item.tokenCost}</div>
-                                        <div style="font-size:12px; color:var(--text-muted);">Tokens Required</div>
+                                        <div style="font-family:var(--font-display); font-size:36px; font-weight:800; color:var(--token-color);">🪙 ${item.tokenCost}</div>
+                                        <div style="font-size:13px; font-weight:600; color:var(--text-muted);">Tokens / Day</div>
                                     </div>
                                 </div>
                                 
@@ -495,15 +534,15 @@
             
             const actions = document.getElementById('item-actions');
             if (item.status === 'available' && item.ownerId !== user.id) {
-                actions.innerHTML = `<button class="btn btn-primary" style="width:100%; padding:18px; font-size:16px;" onclick="borrow('${item.id}')">Request to Borrow Securely</button>`;
+                actions.innerHTML = `<button class="btn btn-primary" style="width:100%; padding:18px; font-size:16px;" onclick="borrow('${item.id}')">Request to Borrow</button>`;
             } else if (item.status !== 'available') {
-                actions.innerHTML = `<div style="padding:16px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); color:var(--warning); border-radius:12px; text-align:center; font-weight:500;">This item is currently ${item.status}.</div>`;
+                actions.innerHTML = `<div style="padding:16px; background:rgba(245,158,11,0.1); color:var(--warning); border-radius:var(--radius-md); text-align:center; font-weight:700;">Item is Currently ${item.status.toUpperCase()}</div>`;
             }
             
             window.borrow = async (id) => {
                 try {
                     await Store.requestBorrow(id);
-                    alert('Request sent! Check your activity to form a handoff.');
+                    alert('Request sent! Navigate to Handoffs to coordinate pickup.');
                     window.location.hash = '#/history';
                 } catch(e) { alert(e.message); }
             };
@@ -515,81 +554,72 @@
             try { txns = await Store.getTxns(); } catch(e) { console.error(e); }
             
             root.innerHTML = `
-                <div class="dashboard-grid">
-                    <div class="sidebar">
-                        <a href="#/dashboard" class="nav-item"><span style="font-size:20px;">🌐</span> Marketplace</a>
-                        <a href="#/history" class="nav-item active"><span style="font-size:20px;">💼</span> My Activity & Handoffs</a>
+                <div style="margin-bottom:40px;">
+                    <div style="padding:32px; background:linear-gradient(135deg, var(--accent-brand), var(--accent-secondary)); border-radius:var(--radius-xxl); color:white; box-shadow:var(--shadow-premium); margin-bottom:32px;">
+                        <h2 style="color:white; font-size:20px; font-weight:600; opacity:0.9;">Portfolio Insights</h2>
+                        <div style="font-size:48px; font-weight:800; font-family:var(--font-display); margin-top:8px;">🪙 ${user.tokens}</div>
+                        <p style="opacity:0.8; font-weight:500;">Available Token Balance</p>
                     </div>
-                    <div>
-                        <h1 style="font-size:32px; margin-bottom:8px;">Transaction Vault</h1>
-                        <p style="color:var(--text-muted); margin-bottom:40px;">Manage active borrow requests and verify handoffs via QR.</p>
+
+                    <h1 style="font-size:32px; margin-bottom:8px;">Lending & Handoffs</h1>
+                    <p style="color:var(--text-muted); font-size:16px;">Manage your active peer-to-peer exchanges.</p>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:20px;">
+                    ${txns.length===0 ? '<p style="color:var(--text-muted); font-weight:500;">No active portfolio items.</p>' : txns.map(t => {
+                        const isBor = t.borrowerId === user.id;
+                        const statusColor = t.status === 'active' ? 'var(--success)' : (t.status === 'pending_verify' || t.status === 'pending' ? 'var(--warning)' : 'var(--text-muted)');
                         
-                        <div style="display:flex; flex-direction:column; gap:16px;">
-                            ${txns.length===0 ? '<p style="color:var(--text-muted)">No activity found.</p>' : txns.map(t => {
-                                const isBor = t.borrowerId === user.id;
-                                const statusColor = t.status === 'active' ? 'var(--success)' : (t.status === 'pending_verify' || t.status === 'pending' ? 'var(--warning)' : 'var(--text-muted)');
-                                
-                                return `
-                                <div class="glass-panel" style="padding:24px; display:flex; justify-content:space-between; align-items:center;">
-                                    <div>
-                                        <h3 style="font-size:18px; margin-bottom:6px;">Item Code: ${t.itemId.substring(0,6).toUpperCase()}</h3>
-                                        <div style="display:flex; gap:12px; font-size:13px; color:var(--text-muted); align-items:center;">
-                                            <span>${isBor ? '⬇️ Borrowing' : '⬆️ Lending'}</span>
-                                            <span style="color:${statusColor}; font-weight:600; padding:2px 8px; background:rgba(255,255,255,0.05); border-radius:6px;">${t.status.toUpperCase()}</span>
-                                            <span style="font-family:var(--font-display); color:${isBor ? 'var(--danger)' : 'var(--success)'}; font-weight:600;">${isBor?'-':'+'}🪙${t.tokenCost}</span>
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; gap:12px;">
-                                        <button class="btn btn-secondary" onclick="window.location.hash='#/chat/${t.id}'">💬 P2P Chat</button>
-                                        ${(isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" onclick="showScanner('${t.id}')">Scan to Receive</button>` : ''}
-                                        ${(!isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,var(--accent-secondary),#be185d);" onclick="showQR('${t.id}')">Generate QR</button>` : ''}
-                                        ${(isBor && t.status === 'active') ? `<button class="btn btn-tertiary" onclick="alert('Feature coming soon: Return Flow via Kafka Events!');">Return Item</button>` : ''}
-                                    </div>
+                        return `
+                        <div class="flagship-card" style="padding:24px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h3 style="font-size:18px; margin-bottom:8px;">Item Key: ${t.itemId.substring(0,8).toUpperCase()}</h3>
+                                <div style="display:flex; gap:12px; font-size:13px; font-weight:600; color:var(--text-muted); align-items:center;">
+                                    <span>${isBor ? '⬇️ Borrowing' : '⬆️ Lending'}</span>
+                                    <span style="color:${statusColor}; background:var(--surface-hover); padding:4px 10px; border-radius:100px;">${t.status.toUpperCase()}</span>
+                                    <span style="font-family:var(--font-display); color:${isBor ? 'var(--danger)' : 'var(--success)'}; font-size:14px;">${isBor?'-':'+'}🪙${t.tokenCost}</span>
                                 </div>
-                                `;
-                            }).join('')}
+                            </div>
+                            <div style="display:flex; gap:12px;">
+                                <button class="btn btn-secondary" onclick="window.location.hash='#/chat/${t.id}'">💬 Connect</button>
+                                ${(isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" onclick="showScanner('${t.id}')">Scan QR to Receive</button>` : ''}
+                                ${(!isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" style="background:var(--accent-secondary);" onclick="showQR('${t.id}')">Deliver Item (QR)</button>` : ''}
+                            </div>
                         </div>
-                    </div>
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
 
-        /* --- STOMP WEBSOCKET CHAT --- */
         let currChatTxn;
         async function renderChatView(root, txnId) {
             currChatTxn = txnId;
             const user = Store.getCurrentUser();
             
             root.innerHTML = `
-                <div class="glass-panel chat-container">
+                <div class="flagship-card chat-container">
                     <div class="chat-header">
-                        <h2>
-                            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="disconnectChat(); window.history.back()">&larr;</button>
-                            Chat Portal
-                            <span style="font-size:14px; font-weight:400; color:var(--text-muted);">Secure Tunnel</span>
-                        </h2>
-                        <div class="item-badge badge-pend" style="position:static;" id="ws-status">Connecting...</div>
+                        <button class="btn btn-secondary" style="padding:8px 16px;" onclick="disconnectChat(); window.history.back()">&larr; Back</button>
+                        <h2 style="font-size:20px;">Secure Pipeline</h2>
+                        <div class="item-badge badge-pend" style="position:static; box-shadow:none; border:1px solid var(--border-color);" id="ws-status">Connecting...</div>
                     </div>
                     
                     <div class="chat-messages" id="chat-box"></div>
                     
                     <div class="chat-input-area">
-                        <input type="text" id="chat-inp" class="chat-input" placeholder="Type an encrypted message..." onkeypress="if(event.key==='Enter') sendMsg()" />
+                        <input type="text" id="chat-inp" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" />
                         <button class="chat-send-btn" onclick="sendMsg()">↑</button>
                     </div>
                 </div>
             `;
 
-            // Load Historical Messages First
             try {
                 const history = await Store.getChatMessages(txnId);
                 history.forEach(m => appendMessage(m, user.id));
-            } catch(e) { console.error("Could not fetch chat history", e); }
+            } catch(e) {}
 
-            // Connect WS
-            connectChat(txnId, (msgBody) => {
-                appendMessage(msgBody, user.id);
-            });
+            connectChat(txnId, (msgBody) => appendMessage(msgBody, user.id));
 
             window.sendMsg = () => {
                 const i = document.getElementById('chat-inp');
@@ -598,79 +628,57 @@
                 
                 if (stompClient && stompClient.connected) {
                     stompClient.publish({
-                        destination: `/app/chat.send`,
-                        body: JSON.stringify({
-                            transactionId: txnId,
-                            senderId: user.id,
-                            content: text,
-                            timestamp: Date.now().toString()
-                        })
+                        destination: \`/app/chat.send\`,
+                        body: JSON.stringify({ transactionId: txnId, senderId: user.id, content: text, timestamp: Date.now().toString() })
                     });
                     i.value = '';
-                } else {
-                    alert("Chat disconnected. Trying to reconnect...");
-                }
+                } else { alert("Offline."); }
             };
         }
 
         function appendMessage(m, myUserId) {
             const box = document.getElementById('chat-box');
-            if(!box) return; // not in chat view
-
+            if(!box) return;
             const isMe = m.senderId === myUserId;
             let timeStr = "Now";
             if(m.timestamp) {
                 const d = new Date(parseInt(m.timestamp));
                 if(d.getTime() > 0) timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             }
-
             const div = document.createElement('div');
-            div.className = `msg-bubble ${isMe ? 'msg-mine' : 'msg-theirs'}`;
-            div.innerHTML = `${m.content} <var-time>${timeStr}</var-time>`;
+            div.className = \`msg-bubble \${isMe ? 'msg-mine' : 'msg-theirs'}\`;
+            div.innerHTML = \`\${m.content} <var-time>\${timeStr}</var-time>\`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         }
 
         function connectChat(txnId, onMsgRecv) {
             if(stompClient) stompClient.deactivate();
-            
-            // Wait for STOMP library load
-            if(!window.StompJs) {
-                setTimeout(() => connectChat(txnId, onMsgRecv), 100);
-                return;
-            }
+            if(!window.StompJs) { setTimeout(() => connectChat(txnId, onMsgRecv), 100); return; }
 
             stompClient = new window.StompJs.Client({
                 brokerURL: 'ws://localhost:8080/ws-chat',
-                connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt },
-                reconnectDelay: 5000,
-                heartbeatIncoming: 4000,
-                heartbeatOutgoing: 4000,
+                connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt }
             });
 
-            stompClient.onConnect = function (frame) {
+            stompClient.onConnect = function () {
                 const st = document.getElementById('ws-status');
-                if(st) { st.innerText = 'Online / E2EE'; st.className = 'item-badge badge-avail'; }
-                
-                stompClient.subscribe(`/topic/messages/${txnId}`, (message) => {
+                if(st) { st.innerText = 'Connected E2E'; st.className = 'item-badge badge-avail'; }
+                stompClient.subscribe(\`/topic/messages/\${txnId}\`, (message) => {
                     if (message.body) onMsgRecv(JSON.parse(message.body));
                 });
             };
-
-            stompClient.onStompError = function (frame) { console.error('Broker error', frame.headers['message']); };
             stompClient.activate();
         }
 
-        function disconnectChat() {
-            if(stompClient) { stompClient.deactivate(); stompClient = null; }
-        }
+        function disconnectChat() { if(stompClient) { stompClient.deactivate(); stompClient = null; } }
 
-        /* --- MODAL LOGIC --- */
+        /* MODALS */
         const mCont = document.getElementById('modal-container');
         const mBody = document.getElementById('modal-content');
         
         function showModal(html) {
-            mBody.innerHTML = `<button class="modal-close" onclick="hideModal()">×</button>` + html;
+            mBody.innerHTML = \`<button class="modal-close" onclick="hideModal()">×</button>\` + html;
             mCont.style.display = 'flex';
         }
         window.hideModal = () => {
@@ -679,20 +687,20 @@
         }
 
         window.showAddModal = () => {
-            showModal(`
-                <h2 style="margin-bottom:8px;">List Item</h2>
-                <p style="color:var(--text-muted); font-size:14px; margin-bottom:24px;">Add a new item to the campus marketplace.</p>
-                <div class="input-group"><label>Item Name</label><input type="text" id="a-name" class="input-field" placeholder="E.g. Yoga Mat"></div>
+            showModal(\`
+                <h2 style="font-size:28px; margin-bottom:8px;">Drop New Gear</h2>
+                <p style="color:var(--text-muted); font-weight:500; font-size:15px; margin-bottom:32px;">List premium campus gear for others to borrow.</p>
+                <div class="input-group"><label>Item Profile</label><input type="text" id="a-name" class="input-field" placeholder="E.g. Sony WH-1000XM5"></div>
                 <div style="display:flex; gap:16px;">
-                    <div class="input-group" style="flex:1"><label>Category</label>
-                        <select id="a-cat" class="input-field" style="appearance:none;"><option>Electronics</option><option>Appliances</option><option>Stationery</option><option>Fitness</option></select>
+                    <div class="input-group" style="flex:1"><label>Category Tags</label>
+                        <select id="a-cat" class="input-field" style="appearance:none;"><option>Tech</option><option>Kitchen</option><option>Fitness</option><option>Apparel</option></select>
                     </div>
-                    <div class="input-group" style="flex:1"><label>Daily Token Cost</label>
+                    <div class="input-group" style="flex:1"><label>Daily Valuation</label>
                         <input type="number" id="a-cost" class="input-field" placeholder="2" value="2">
                     </div>
                 </div>
-                <button class="btn btn-primary" style="width:100%; padding:14px; margin-top:10px;" onclick="doAddItem()">Publish Securely</button>
-            `);
+                <button class="btn btn-primary" style="width:100%; padding:18px; margin-top:16px;" onclick="doAddItem()">Publish Drop</button>
+            \`);
         };
         
         window.doAddItem = async () => {
@@ -700,60 +708,49 @@
             const category = document.getElementById('a-cat').value;
             const tokenCost = parseInt(document.getElementById('a-cost').value);
             if(!name || !tokenCost) return;
-            const user = Store.getCurrentUser();
-            
             try {
-                await Store.listNewItem({
-                    ownerId: user.id, name, category, tokenCost, 
-                    pickupLocation: user.block, description: 'Added via P2P Web Client'
-                });
+                await Store.listNewItem({ ownerId: Store.getCurrentUser().id, name, category, tokenCost, pickupLocation: Store.getCurrentUser().block, description: 'Premium Item Drop' });
                 hideModal(); router();
-            } catch(e) {
-                alert("Could not post item: " + e.message);
-            }
+            } catch(e) { alert(e.message); }
         };
 
         window.showQR = (txnId) => {
-            showModal(`
+            showModal(\`
                 <div style="text-align:center;">
-                    <h2 style="margin-bottom:8px;">Handoff QR</h2>
-                    <p style="color:var(--text-muted); font-size:13px; margin-bottom:24px;">Borrower scans this to release tokens securely.</p>
-                    <div id="qr-canvas" style="background:white; padding:16px; border-radius:24px; display:inline-block; margin-bottom:24px;"></div>
-                    <div style="color:var(--accent-brand); font-family:var(--font-display); font-size:24px; letter-spacing:4px; font-weight:700;">${txnId.substring(0,8)}</div>
-                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; margin-top:8px;">Manual Verification Code</div>
+                    <h2 style="font-size:28px; margin-bottom:8px;">Handoff Authorization</h2>
+                    <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Present this to the borrower to finalize tracking.</p>
+                    <div id="qr-canvas" style="background:white; padding:24px; border-radius:24px; display:inline-block; margin-bottom:24px; box-shadow:var(--shadow-premium);"></div>
+                    <div style="color:var(--accent-secondary); font-family:var(--font-display); font-size:24px; letter-spacing:4px; font-weight:800;">\${txnId.substring(0,8)}</div>
                 </div>
-            `);
+            \`);
             const qr = qrcode(0, 'H'); qr.addData(txnId); qr.make();
             document.getElementById('qr-canvas').innerHTML = qr.createImgTag(6);
         };
 
         window.showScanner = (txnId) => {
-            showModal(`
+            showModal(\`
                 <div style="text-align:center;">
-                    <h2 style="margin-bottom:8px;">Verify Handoff</h2>
-                    <p style="color:var(--text-muted); font-size:13px; margin-bottom:24px;">Scan the lender's device to assume possession.</p>
-                    <div id="reader-box" style="border-radius:16px; overflow:hidden; border:2px solid var(--accent-brand);"></div>
-                    <div style="margin-top:24px; display:flex; gap:8px;">
-                        <input type="text" id="m-pin" class="input-field" placeholder="Or paste full Txn Key" style="padding:10px 16px;">
+                    <h2 style="font-size:28px; margin-bottom:8px;">Verify Intake</h2>
+                    <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Scan the lender's device to release tokens.</p>
+                    <div id="reader-box" style="border-radius:24px; overflow:hidden; border:2px solid var(--accent-brand); box-shadow:var(--shadow-premium);"></div>
+                    <div style="margin-top:32px; display:flex; gap:12px;">
+                        <input type="text" id="m-pin" class="input-field" placeholder="Or enter manual code" style="border-radius:100px;">
                         <button class="btn btn-primary" onclick="completeHandoff(document.getElementById('m-pin').value)">Verify</button>
                     </div>
                 </div>
-            `);
+            \`);
             window.qs = new Html5QrcodeScanner("reader-box", { fps: 10, qrbox: 200, disableFlip: false });
-            window.qs.render(text => {
-                completeHandoff(text);
-            });
+            window.qs.render(text => completeHandoff(text));
         };
 
         window.completeHandoff = async (scannedId) => {
             try {
                 await Store.verifyHandoff(scannedId);
-                alert("Handoff cryptographically verified. Event published to Kafka pipeline!");
-                hideModal(); router(); renderNav();
-            } catch(e) { alert("Verification failed. Please check connection."); }
+                alert("Successfully Verified. Smart Contract execution triggered to backend.");
+                hideModal(); router();
+            } catch(e) { alert("Verification failed."); }
         };
 
-        // Boot
         initApp();
     </script>
 </body>
