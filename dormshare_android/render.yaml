@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: dormshare-backend
+    env: docker
+    dockerContext: dormshare-backend
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: SERVER_PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+        value: localhost:9092

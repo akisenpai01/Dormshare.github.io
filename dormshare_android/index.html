@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DormShare — P2P Campus Network</title>
+    
+    <!-- Dependencies for QR and Websocket -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+    
+    <!-- Flagship Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Digital Flagship Palette */
+            --bg-color: #f6f6ff;
+            --surface-color: #ffffff;
+            --surface-hover: #f8f9fc;
+            --border-color: rgba(39, 46, 66, 0.06);
+            
+            --text-main: #272e42;
+            --text-muted: #64748b;
+            
+            --accent-brand: #0846ed; /* Hyper-Blue */
+            --accent-brand-glow: rgba(8, 70, 237, 0.2);
+            --accent-secondary: #702ae1; /* Electric Purple */
+            
+            --token-color: #f59e0b; /* Retaining Gold for tokens */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            
+            --radius-md: 1rem;
+            --radius-xxl: 1.5rem; /* Squircle */
+            --shadow-premium: 0 12px 32px rgba(39, 46, 66, 0.06);
+            --shadow-soft: 0 4px 12px rgba(39, 46, 66, 0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden; 
+            min-height: 100vh;
+            padding-bottom: 100px; /* Space for bottom nav */
+        }
+
+        h1, h2, h3, h4, h5 { 
+            font-family: var(--font-display); 
+            font-weight: 700; 
+            letter-spacing: -0.02em; 
+            color: var(--text-main);
+        }
+        
+        a { text-decoration: none; color: inherit; }
+        
+        .flagship-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xxl);
+            box-shadow: var(--shadow-premium);
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Top Bar (Dynamic Header) */
+        header {
+            position: sticky; top: 0; z-index: 900;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 24px 5%;
+            background: rgba(246, 246, 255, 0.85); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-logo {
+            font-family: var(--font-display); font-size: 24px; font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-brand), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .header-controls { display: flex; align-items: center; gap: 16px; }
+
+        .token-badge {
+            display: flex; align-items: center; gap: 6px; 
+            background: #fff; border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 100px; 
+            font-family: var(--font-display); font-weight: 700; font-size: 14px;
+            color: var(--text-main); box-shadow: var(--shadow-soft);
+        }
+        .token-badge span { color: var(--token-color); }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 12px; border-radius: 100px;
+            box-shadow: 0 20px 40px rgba(39, 46, 66, 0.12);
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        .nav-pill {
+            padding: 12px 24px; border-radius: 100px;
+            font-family: var(--font-display); font-weight: 600; font-size: 14px;
+            color: var(--text-muted); cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-pill:hover { color: var(--text-main); background: var(--surface-hover); }
+        .nav-pill.active { background: var(--accent-brand); color: #fff; box-shadow: 0 8px 20px var(--accent-brand-glow); }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 28px; border-radius: 100px;
+            font-family: var(--font-display); font-weight: 600; font-size: 15px;
+            border: none; cursor: pointer; transition: all 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--accent-brand); color: #fff; box-shadow: 0 8px 20px var(--accent-brand-glow); }
+        .btn-primary:hover { background: #063bc9; transform: translateY(-2px); box-shadow: 0 12px 24px var(--accent-brand-glow); }
+        
+        .btn-secondary { background: #fff; color: var(--text-main); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft); }
+        .btn-secondary:hover { background: var(--surface-hover); border-color: rgba(39,46,66,0.15); }
+        
+        .btn-tertiary { background: rgba(112, 42, 225, 0.1); color: var(--accent-secondary); }
+        .btn-tertiary:hover { background: rgba(112, 42, 225, 0.15); }
+
+        /* Input Fields */
+        .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; text-align: left; }
+        .input-group label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .input-field {
+            width: 100%; padding: 16px 20px; background: #fff; border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-md); color: var(--text-main); font-family: var(--font-body); font-size: 15px;
+            transition: all 0.2s; outline: none; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .input-field:focus { border-color: var(--accent-brand); box-shadow: 0 0 0 4px var(--accent-brand-glow); }
+
+        /* Layout Grids */
+        #app { padding: 32px 5%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+        
+        .bento-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 24px; 
+        }
+        .bento-wide { grid-column: 1 / -1; }
+        @media (min-width: 768px) {
+            .bento-featured { grid-column: span 2; grid-row: span 2; }
+        }
+
+        /* Chips */
+        .chip-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
+        .chip-scroll::-webkit-scrollbar { display: none; }
+        .filter-chip { 
+            padding: 10px 24px; border-radius: 100px; font-size: 14px; font-weight: 600; font-family: var(--font-display);
+            background: #fff; border: 1px solid var(--border-color); color: var(--text-muted); 
+            cursor: pointer; white-space: nowrap; transition: all 0.2s; box-shadow: var(--shadow-soft);
+        }
+        .filter-chip:hover { background: var(--surface-hover); color: var(--text-main); }
+        .filter-chip.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+
+        /* Item Cards */
+        .item-card { 
+            padding: 24px; display: flex; flex-direction: column; gap: 20px; cursor: pointer; position: relative; overflow: hidden;
+            background: #fff; border-radius: var(--radius-xxl); border: 1px solid var(--border-color); box-shadow: var(--shadow-soft);
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+        }
+        .item-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-premium); }
+        
+        .item-visual { 
+            height: 180px; border-radius: var(--radius-md); display: flex; justify-content: center; align-items: center; 
+            font-size: 64px; background: var(--bg-color); position: relative; overflow: hidden;
+        }
+        .item-badge { 
+            position: absolute; top: 12px; right: 12px; padding: 6px 14px; border-radius: 100px; 
+            font-family: var(--font-display); font-size: 12px; font-weight: 700; text-transform: uppercase; 
+            background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .badge-avail { color: var(--success); }
+        .badge-pend { color: var(--warning); }
+        .badge-borr { color: var(--danger); }
+        
+        .item-info h3 { font-size: 22px; margin-bottom: 6px; }
+        .item-info .meta { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+        .item-cost { 
+            display: flex; align-items: center; justify-content: space-between; 
+            margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border-color); 
+        }
+        .cost-val { font-family: var(--font-display); font-size: 20px; font-weight: 800; color: var(--text-main); }
+
+        /* Auth */
+        .auth-wrap { max-width: 440px; margin: 40px auto; text-align: center; width: 100%; padding: 48px 32px; }
+        .auth-wrap h1 { font-size: 40px; margin-bottom: 12px; color: var(--accent-brand); }
+
+        /* Chat */
+        .chat-container { display: flex; flex-direction: column; height: 75vh; max-width: 900px; margin: 0 auto; width: 100%; overflow: hidden; }
+        .chat-header { padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #fff; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 32px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-color); }
+        .msg-bubble { max-width: 70%; padding: 16px 20px; font-size: 15px; border-radius: var(--radius-md); position: relative; animation: slideIn 0.3s ease; box-shadow: var(--shadow-soft); }
+        @keyframes slideIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+        var-time { font-size: 11px; opacity: 0.7; margin-top: 8px; display: block; font-weight: 500; }
+        .msg-mine { align-self: flex-end; background: var(--accent-brand); color: white; border-bottom-right-radius: 4px; }
+        .msg-theirs { align-self: flex-start; background: #fff; border: 1px solid var(--border-color); border-bottom-left-radius: 4px; }
+        .chat-input-area { padding: 20px 24px; background: #fff; border-top: 1px solid var(--border-color); display: flex; gap: 16px; }
+        .chat-input { flex: 1; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 100px; padding: 16px 24px; color: var(--text-main); font-family: var(--font-body); outline: none; }
+        .chat-input:focus { border-color: var(--accent-brand); }
+        .chat-send-btn { width: 50px; height: 50px; border-radius: 50%; border: none; background: var(--accent-brand); color: white; cursor: pointer; transition: transform 0.2s; box-shadow: 0 4px 12px var(--accent-brand-glow); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(39, 46, 66, 0.4); backdrop-filter: blur(8px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-card { width: 100%; max-width: 500px; padding: 48px; background: #fff; position: relative; border-radius: var(--radius-xxl); transform: scale(0.95); opacity: 0; animation: modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; box-shadow: 0 24px 48px rgba(39, 46, 66, 0.15); }
+        @keyframes modalIn { to { transform: scale(1); opacity: 1; } }
+        .modal-close { position: absolute; top: 24px; right: 24px; width: 36px; height: 36px; background: var(--bg-color); border: none; border-radius: 50%; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-logo" onclick="window.location.hash='#/'" style="cursor:pointer;">DormShare</div>
+        <div class="header-controls" id="header-auth"></div>
+    </header>
+
+    <div id="app"></div>
+
+    <div class="bottom-nav" id="bottom-nav" style="display: none;">
+        <div class="nav-pill active" onclick="window.location.hash='#/dashboard'" id="nav-explore">Explore</div>
+        <div class="nav-pill" onclick="window.location.hash='#/history'" id="nav-lending">Lending & Handoffs</div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-container" class="modal-overlay" onclick="if(event.target === this) hideModal()">
+        <div class="modal-card" id="modal-content"></div>
+    </div>
+
+    <!-- UI State and Global Store -->
+    <script>
+        const BASE_URL = 'https://1e9f0f90923b2763-223-188-4-111.serveousercontent.com';
+        let stompClient = null;
+
+        const Store = {
+            data: { user: null, jwt: null },
+            
+            init() {
+                const localToken = localStorage.getItem('dormshare_jwt');
+                const localUser = localStorage.getItem('dormshare_user');
+                if (localToken && localUser) {
+                    this.data.jwt = localToken;
+                    this.data.user = JSON.parse(localUser);
+                }
+            },
+            
+            save(user, jwt) {
+                this.data.user = user;
+                if(jwt) this.data.jwt = jwt;
+                
+                localStorage.setItem('dormshare_user', JSON.stringify(this.data.user));
+                if(jwt) localStorage.setItem('dormshare_jwt', this.data.jwt);
+            },
+            
+            logout() {
+                this.data.user = null; this.data.jwt = null;
+                localStorage.removeItem('dormshare_user');
+                localStorage.removeItem('dormshare_jwt');
+                if(stompClient) { stompClient.deactivate(); stompClient = null; }
+            },
+            
+            getCurrentUser() { return this.data.user; },
+            
+            getHeaders() {
+                const h = { 'Content-Type': 'application/json' };
+                if(this.data.jwt) h['Authorization'] = 'Bearer ' + this.data.jwt;
+                return h;
+            },
+            
+            async signup(name, email, pass, block) {
+                const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+                    method: 'POST', headers: this.getHeaders(),
+                    body: JSON.stringify({ name, email, password: pass, hostelBlock: block })
+                });
+                if(!res.ok) {
+                    const text = await res.text();
+                    throw new Error(text || "Sign up failed");
+                }
+            },
+            
+            async login(email, pass) {
+                try {
+                    let res = await fetch(`${BASE_URL}/api/auth/signin`, {
+                        method: 'POST', headers: this.getHeaders(),
+                        body: JSON.stringify({ email, password: pass })
+                    });
+                    if(!res.ok) throw new Error("Invalid credentials or unregistered");
+                    const data = await res.json();
+                    
+                    const u = {
+                        id: data.userId || data.id,
+                        name: data.name || email.split('@')[0],
+                        email: data.email || email,
+                        tokens: data.tokens || 10,
+                        block: data.hostelBlock || 'Campus'
+                    };
+                    this.save(u, data.token || data.jwt);
+                } catch(e) { throw new Error(e.message || "Authentication failed."); }
+            },
+
+            async getItems() {
+                if(!this.data.user) return [];
+                const res = await fetch(`${BASE_URL}/api/market/items?currentUserId=${this.data.user.id}`, { headers: this.getHeaders() });
+                if(!res.ok) return [];
+                return await res.json();
+            },
+
+            async listNewItem(itemData) {
+                const res = await fetch(`${BASE_URL}/api/market/add`, {
+                    method: 'POST', headers: this.getHeaders(), body: JSON.stringify(itemData)
+                });
+                if(!res.ok) throw new Error("Failed to post item.");
+            },
+
+            async requestBorrow(itemId) {
+                const item = window.__DSDATA && window.__DSDATA.items ? window.__DSDATA.items.find(i=>i.id===itemId) : null;
+                const tokenCost = item ? item.tokenCost : 0;
+                const lenderId = item ? item.ownerId : null;
+                const res = await fetch(`${BASE_URL}/api/transactions/request`, {
+                    method: 'POST', headers: this.getHeaders(), 
+                    body: JSON.stringify({ itemId, borrowerId: this.data.user.id, lenderId, tokenCost })
+                });
+                if(!res.ok) throw new Error("Failed to request borrow.");
+            },
+
+            async getTxns() {
+                if(!this.data.user) return [];
+                const res = await fetch(`${BASE_URL}/api/transactions/history?userId=${this.data.user.id}`, { headers: this.getHeaders() });
+                if(!res.ok) return [];
+                return await res.json();
+            },
+
+            async verifyHandoff(txnId) {
+                const res = await fetch(`${BASE_URL}/api/transactions/verify/${txnId}`, { method: 'POST', headers: this.getHeaders() });
+                if(!res.ok) throw new Error("QR verification failed.");
+            },
+
+            async getChatMessages(txnId) {
+                const res = await fetch(`${BASE_URL}/api/chat/${txnId}`, { headers: this.getHeaders() });
+                if(!res.ok) return [];
+                return await res.json();
+            }
+        };
+
+        // Routing & State
+        let currentCat = 'All';
+        const cats = ['All', 'Tech', 'Kitchen', 'Fitness', 'Apparel'];
+
+        function initApp() {
+            Store.init();
+            renderHeader();
+            window.addEventListener('hashchange', router);
+            router();
+        }
+
+        async function router() {
+            const hash = window.location.hash || '#/';
+            const user = Store.getCurrentUser();
+            const app = document.getElementById('app');
+            const nav = document.getElementById('bottom-nav');
+            
+            nav.style.display = user ? 'flex' : 'none';
+            app.innerHTML = '<div style="text-align:center; padding:100px; color:var(--text-muted); font-weight:600;">Loading UI Modules...</div>';
+            
+            if (!user && hash !== '#/') { window.location.hash = '#/'; return; }
+            if (user && hash === '#/') { window.location.hash = '#/dashboard'; return; }
+
+            // Manage Nav pills
+            if(document.getElementById('nav-explore')) {
+                document.getElementById('nav-explore').className = hash.includes('dashboard') ? 'nav-pill active' : 'nav-pill';
+                document.getElementById('nav-lending').className = hash.includes('history') ? 'nav-pill active' : 'nav-pill';
+            }
+
+            if (hash === '#/') renderLogin(app);
+            else if (hash === '#/dashboard') await renderDashboard(app);
+            else if (hash === '#/history') await renderHistory(app);
+            else if (hash.startsWith('#/item/')) {
+                nav.style.display = 'none'; // immersive details
+                await renderItemInfo(app, hash.split('/')[2]);
+            }
+            else if (hash.startsWith('#/chat/')) {
+                nav.style.display = 'none';
+                await renderChatView(app, hash.split('/')[2]);
+            }
+        }
+
+        function renderHeader() {
+            const container = document.getElementById('header-auth');
+            const user = Store.getCurrentUser();
+            if (user) {
+                container.innerHTML = `
+                    <div class="token-badge"><span>🪙</span> ${user.tokens} Tokens</div>
+                    <button class="btn btn-secondary" onclick="Store.logout(); renderHeader(); router();" style="padding: 8px 16px; border-radius: 100px; font-size:13px;">Sign Out</button>
+                `;
+            } else {
+                container.innerHTML = `<button class="btn btn-primary" onclick="window.location.hash='#/'" style="padding: 8px 16px; font-size:13px;">Sign In</button>`;
+            }
+        }
+
+        function renderLogin(root) {
+            window.__AUTH_MODE = window.__AUTH_MODE || 'login';
+            const isLogin = window.__AUTH_MODE === 'login';
+            
+            root.innerHTML = `
+                <div class="flagship-card auth-wrap">
+                    <h1 style="color:var(--text-main); font-size:32px;">${isLogin ? 'Welcome Back' : 'Create Account'}</h1>
+                    <p style="color:var(--text-muted); margin-bottom:40px; font-weight:500;">${isLogin ? 'Log in to the Campus Marketplace.' : 'Join DormShare and start trading.'}</p>
+                    
+                    <div id="auth-err" style="color:var(--danger); margin-bottom:16px; font-size:14px; font-weight:600;"></div>
+                    
+                    ${!isLogin ? `
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input id="fname" type="text" class="input-field" placeholder="John Doe" />
+                    </div>
+                    <div class="input-group">
+                        <label>Hostel Block</label>
+                        <input id="block" type="text" class="input-field" placeholder="E.g. Block A" />
+                    </div>
+                    ` : ''}
+
+                    <div class="input-group">
+                        <label>Student Email</label>
+                        <input id="email" type="email" class="input-field" placeholder="student@stu.upes.ac.in" />
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input id="pass" type="password" class="input-field" placeholder="••••••••" />
+                    </div>
+
+                    <button id="auth-btn" class="btn btn-primary" style="width:100%; margin-top:16px; font-size:16px; padding:18px;" onclick="doAuth()">
+                        ${isLogin ? 'Log In Securely' : 'Register Account'}
+                    </button>
+
+                    <p style="margin-top:24px; font-size:14px; color:var(--text-muted); cursor:pointer;" onclick="toggleAuthMode()">
+                        ${isLogin ? "Don't have an account? <b style='color:var(--accent-brand)'>Sign up</b>" : "Already have an account? <b style='color:var(--accent-brand)'>Log in</b>"}
+                    </p>
+                </div>
+            `;
+
+            window.toggleAuthMode = () => {
+                window.__AUTH_MODE = window.__AUTH_MODE === 'login' ? 'signup' : 'login';
+                router();
+            };
+
+            window.doAuth = async () => {
+                const btn = document.getElementById('auth-btn');
+                const err = document.getElementById('auth-err');
+                err.innerText = '';
+                btn.innerText = 'Processing...';
+                
+                try {
+                    const email = document.getElementById('email').value;
+                    const pass = document.getElementById('pass').value;
+                    
+                    if(window.__AUTH_MODE === 'signup') {
+                        const name = document.getElementById('fname').value;
+                        const block = document.getElementById('block').value;
+                        if(!name || !email || !pass || !block) throw new Error("All fields are required.");
+                        await Store.signup(name, email, pass, block);
+                        alert("Account created successfully! Please log in.");
+                        window.toggleAuthMode();
+                        return;
+                    } else {
+                        await Store.login(email, pass);
+                        renderHeader(); router();
+                    }
+                } catch(e) { 
+                    err.innerText = e.message; 
+                    btn.innerText = window.__AUTH_MODE === 'login' ? 'Log In Securely' : 'Register Account'; 
+                }
+            };
+        }
+
+        async function renderDashboard(root) {
+            const user = Store.getCurrentUser();
+            let allItems = [];
+            try { allItems = await Store.getItems(); } catch(e) { console.error(e); }
+
+            let chipsHtml = cats.map(c => `<div class="filter-chip ${c===currentCat?'active':''}" onclick="setCat('${c}')">${c}</div>`).join('');
+            const filteredItems = currentCat === 'All' ? allItems : allItems.filter(i => i.category === currentCat);
+
+            root.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                    <div>
+                        <h1 style="font-size:36px;">Campus Drops</h1>
+                        <p style="color:var(--text-muted); margin-top:8px; font-size:16px;">Discover premium gear available right now.</p>
+                    </div>
+                    <button class="btn btn-tertiary" onclick="showAddModal()">+ List Gear</button>
+                </div>
+                
+                <div class="chip-scroll">${chipsHtml}</div>
+                
+                <div class="bento-grid" id="items-grid"></div>
+            `;
+            
+            window.setCat = (c) => { currentCat = c; router(); };
+            
+            const grid = document.getElementById('items-grid');
+            window.__DSDATA = window.__DSDATA || {}; window.__DSDATA.items = allItems;
+            
+            grid.innerHTML = filteredItems.length === 0 ? '<p style="color:var(--text-muted); grid-column:1/-1;">No items available in this category.</p>' : filteredItems.map((i, idx) => `
+                <div class="item-card ${idx===0 ? 'bento-featured' : ''}" onclick="window.location.hash='#/item/${i.id}'">
+                    <div class="item-visual" style="background: linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color));">
+                        <div class="item-badge ${i.status==='available'?'badge-avail':'badge-pend'}">${i.status}</div>
+                        🛒
+                    </div>
+                    <div class="item-info">
+                        <h3>${i.name}</h3>
+                        <p class="meta">📍 ${i.pickupLocation} • ${i.category}</p>
+                        <div class="item-cost">
+                            <span class="cost-val">🪙 ${i.tokenCost}<span style="font-size:13px; color:var(--text-muted); font-weight:600;"> /day</span></span>
+                            <span style="color:var(--accent-secondary); font-size:14px; font-weight:700;">Details &rarr;</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getCatColor(cat) {
+            const map = { 'Tech':'#e0e7ff', 'Kitchen': '#fce7f3', 'Fitness': '#fef3c7', 'Apparel': '#ccfbf1' };
+            return map[cat] || '#f1f5f9';
+        }
+
+        async function renderItemInfo(root, id) {
+            let items = [];
+            try { items = await Store.getItems(); } catch(e) {}
+            const item = items.find(i=>i.id===id) || (window.__DSDATA && window.__DSDATA.items ? window.__DSDATA.items.find(i=>i.id===id) : null);
+            
+            if(!item) { root.innerHTML = '<p>Item not found.</p>'; return; }
+            
+            const user = Store.getCurrentUser();
+            
+            root.innerHTML = `
+                <div style="max-width:800px; margin:0 auto; width:100%;">
+                    <button class="btn btn-secondary" onclick="window.history.back()" style="margin-bottom:32px;">&larr; Back</button>
+                    
+                    <div class="flagship-card" style="padding:48px;">
+                        <div style="display:flex; gap:40px; flex-wrap:wrap;">
+                            <div class="item-visual" style="flex:1; min-width:300px; height:350px; background: linear-gradient(135deg, ${getCatColor(item.category)}, var(--surface-hover)); font-size:120px;">
+                                📦
+                            </div>
+                            <div style="flex:1.5; min-width:300px; display:flex; flex-direction:column;">
+                                <div style="display:inline-block; padding:8px 16px; background:rgba(8,70,237,0.1); border-radius:100px; font-size:12px; font-weight:700; color:var(--accent-brand); width:fit-content; margin-bottom:16px;">${item.category ? item.category.toUpperCase() : 'GEAR'}</div>
+                                <h1 style="font-size:40px; margin-bottom:16px; line-height:1.1;">${item.name}</h1>
+                                <p style="font-size:16px; color:var(--text-muted); line-height:1.6; margin-bottom:32px;">${item.description || "Premium campus gear available for immediate borrowing."}</p>
+                                
+                                <div style="display:flex; align-items:center; justify-content:space-between; padding:24px; background:var(--bg-color); border-radius:var(--radius-md); margin-top:auto;">
+                                    <div>
+                                        <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Lender Details</div>
+                                        <div style="font-weight:700; font-size:16px;">ID: ${item.ownerId.substring(0,8)}</div>
+                                        <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">📍 ${item.pickupLocation}</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-family:var(--font-display); font-size:36px; font-weight:800; color:var(--token-color);">🪙 ${item.tokenCost}</div>
+                                        <div style="font-size:13px; font-weight:600; color:var(--text-muted);">Tokens / Day</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-top:24px;" id="item-actions"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const actions = document.getElementById('item-actions');
+            if (item.status === 'available' && item.ownerId !== user.id) {
+                actions.innerHTML = `<button class="btn btn-primary" style="width:100%; padding:18px; font-size:16px;" onclick="borrow('${item.id}')">Request to Borrow</button>`;
+            } else if (item.status !== 'available') {
+                actions.innerHTML = `<div style="padding:16px; background:rgba(245,158,11,0.1); color:var(--warning); border-radius:var(--radius-md); text-align:center; font-weight:700;">Item is Currently ${item.status.toUpperCase()}</div>`;
+            }
+            
+            window.borrow = async (id) => {
+                try {
+                    await Store.requestBorrow(id);
+                    alert('Request sent! Navigate to Handoffs to coordinate pickup.');
+                    window.location.hash = '#/history';
+                } catch(e) { alert(e.message); }
+            };
+        }
+
+        async function renderHistory(root) {
+            const user = Store.getCurrentUser();
+            let txns = [];
+            try { txns = await Store.getTxns(); } catch(e) { console.error(e); }
+            
+            root.innerHTML = `
+                <div style="margin-bottom:40px;">
+                    <div style="padding:32px; background:linear-gradient(135deg, var(--accent-brand), var(--accent-secondary)); border-radius:var(--radius-xxl); color:white; box-shadow:var(--shadow-premium); margin-bottom:32px;">
+                        <h2 style="color:white; font-size:20px; font-weight:600; opacity:0.9;">Portfolio Insights</h2>
+                        <div style="font-size:48px; font-weight:800; font-family:var(--font-display); margin-top:8px;">🪙 ${user.tokens}</div>
+                        <p style="opacity:0.8; font-weight:500;">Available Token Balance</p>
+                    </div>
+
+                    <h1 style="font-size:32px; margin-bottom:8px;">Lending & Handoffs</h1>
+                    <p style="color:var(--text-muted); font-size:16px;">Manage your active peer-to-peer exchanges.</p>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:20px;">
+                    ${txns.length===0 ? '<p style="color:var(--text-muted); font-weight:500;">No active portfolio items.</p>' : txns.map(t => {
+                        const isBor = t.borrowerId === user.id;
+                        const statusColor = t.status === 'active' ? 'var(--success)' : (t.status === 'pending_verify' || t.status === 'pending' ? 'var(--warning)' : 'var(--text-muted)');
+                        
+                        return `
+                        <div class="flagship-card" style="padding:24px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h3 style="font-size:18px; margin-bottom:8px;">Item Key: ${t.itemId.substring(0,8).toUpperCase()}</h3>
+                                <div style="display:flex; gap:12px; font-size:13px; font-weight:600; color:var(--text-muted); align-items:center;">
+                                    <span>${isBor ? '⬇️ Borrowing' : '⬆️ Lending'}</span>
+                                    <span style="color:${statusColor}; background:var(--surface-hover); padding:4px 10px; border-radius:100px;">${t.status.toUpperCase()}</span>
+                                    <span style="font-family:var(--font-display); color:${isBor ? 'var(--danger)' : 'var(--success)'}; font-size:14px;">${isBor?'-':'+'}🪙${t.tokenCost}</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:12px;">
+                                <button class="btn btn-secondary" onclick="window.location.hash='#/chat/${t.id}'">💬 Connect</button>
+                                ${(isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" onclick="showScanner('${t.id}')">Scan QR to Receive</button>` : ''}
+                                ${(!isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" style="background:var(--accent-secondary);" onclick="showQR('${t.id}')">Deliver Item (QR)</button>` : ''}
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        let currChatTxn;
+        async function renderChatView(root, txnId) {
+            currChatTxn = txnId;
+            const user = Store.getCurrentUser();
+            
+            root.innerHTML = `
+                <div class="flagship-card chat-container">
+                    <div class="chat-header">
+                        <button class="btn btn-secondary" style="padding:8px 16px;" onclick="disconnectChat(); window.history.back()">&larr; Back</button>
+                        <h2 style="font-size:20px;">Secure Pipeline</h2>
+                        <div class="item-badge badge-pend" style="position:static; box-shadow:none; border:1px solid var(--border-color);" id="ws-status">Connecting...</div>
+                    </div>
+                    
+                    <div class="chat-messages" id="chat-box"></div>
+                    
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-inp" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" />
+                        <button class="chat-send-btn" onclick="sendMsg()">↑</button>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const history = await Store.getChatMessages(txnId);
+                history.forEach(m => appendMessage(m, user.id));
+            } catch(e) {}
+
+            connectChat(txnId, (msgBody) => appendMessage(msgBody, user.id));
+
+            window.sendMsg = () => {
+                const i = document.getElementById('chat-inp');
+                const text = i.value.trim();
+                if(!text) return;
+                
+                if (stompClient && stompClient.connected) {
+                    stompClient.publish({
+                        destination: `/app/chat.send`,
+                        body: JSON.stringify({ transactionId: txnId, senderId: user.id, content: text, timestamp: Date.now().toString() })
+                    });
+                    i.value = '';
+                } else { alert("Offline."); }
+            };
+        }
+
+        function appendMessage(m, myUserId) {
+            const box = document.getElementById('chat-box');
+            if(!box) return;
+            const isMe = m.senderId === myUserId;
+            let timeStr = "Now";
+            if(m.timestamp) {
+                const d = new Date(parseInt(m.timestamp));
+                if(d.getTime() > 0) timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+            const div = document.createElement('div');
+            div.className = `msg-bubble ${isMe ? 'msg-mine' : 'msg-theirs'}`;
+            div.innerHTML = `${m.content} <var-time>${timeStr}</var-time>`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function connectChat(txnId, onMsgRecv) {
+            if(stompClient) stompClient.deactivate();
+            if(!window.StompJs) { setTimeout(() => connectChat(txnId, onMsgRecv), 100); return; }
+
+            stompClient = new window.StompJs.Client({
+                brokerURL: 'wss://1e9f0f90923b2763-223-188-4-111.serveousercontent.com/ws-chat',
+                connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt }
+            });
+
+            stompClient.onConnect = function () {
+                const st = document.getElementById('ws-status');
+                if(st) { st.innerText = 'Connected E2E'; st.className = 'item-badge badge-avail'; }
+                stompClient.subscribe(`/topic/messages/${txnId}`, (message) => {
+                    if (message.body) onMsgRecv(JSON.parse(message.body));
+                });
+            };
+            stompClient.activate();
+        }
+
+        function disconnectChat() { if(stompClient) { stompClient.deactivate(); stompClient = null; } }
+
+        /* MODALS */
+        const mCont = document.getElementById('modal-container');
+        const mBody = document.getElementById('modal-content');
+        
+        function showModal(html) {
+            mBody.innerHTML = `<button class="modal-close" onclick="hideModal()">×</button>` + html;
+            mCont.style.display = 'flex';
+        }
+        window.hideModal = () => {
+            if(window.qs) { window.qs.clear(); window.qs = null; }
+            mCont.style.display = 'none';
+        }
+
+        window.showAddModal = () => {
+            showModal(`
+                <h2 style="font-size:28px; margin-bottom:8px;">Drop New Gear</h2>
+                <p style="color:var(--text-muted); font-weight:500; font-size:15px; margin-bottom:32px;">List premium campus gear for others to borrow.</p>
+                <div class="input-group"><label>Item Profile</label><input type="text" id="a-name" class="input-field" placeholder="E.g. Sony WH-1000XM5"></div>
+                <div style="display:flex; gap:16px;">
+                    <div class="input-group" style="flex:1"><label>Category Tags</label>
+                        <select id="a-cat" class="input-field" style="appearance:none;"><option>Tech</option><option>Kitchen</option><option>Fitness</option><option>Apparel</option></select>
+                    </div>
+                    <div class="input-group" style="flex:1"><label>Daily Valuation</label>
+                        <input type="number" id="a-cost" class="input-field" placeholder="2" value="2">
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width:100%; padding:18px; margin-top:16px;" onclick="doAddItem()">Publish Drop</button>
+            `);
+        };
+        
+        window.doAddItem = async () => {
+            const name = document.getElementById('a-name').value;
+            const category = document.getElementById('a-cat').value;
+            const tokenCost = parseInt(document.getElementById('a-cost').value);
+            if(!name || !tokenCost) return;
+            try {
+                await Store.listNewItem({ ownerId: Store.getCurrentUser().id, name, category, tokenCost, pickupLocation: Store.getCurrentUser().block, description: 'Premium Item Drop' });
+                hideModal(); router();
+            } catch(e) { alert(e.message); }
+        };
+
+        window.showQR = (txnId) => {
+            showModal(`
+                <div style="text-align:center;">
+                    <h2 style="font-size:28px; margin-bottom:8px;">Handoff Authorization</h2>
+                    <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Present this to the borrower to finalize tracking.</p>
+                    <div id="qr-canvas" style="background:white; padding:24px; border-radius:24px; display:inline-block; margin-bottom:24px; box-shadow:var(--shadow-premium);"></div>
+                    <div style="color:var(--accent-secondary); font-family:var(--font-display); font-size:24px; letter-spacing:4px; font-weight:800;">${txnId.substring(0,8)}</div>
+                </div>
+            `);
+            const qr = qrcode(0, 'H'); qr.addData(txnId); qr.make();
+            document.getElementById('qr-canvas').innerHTML = qr.createImgTag(6);
+        };
+
+        window.showScanner = (txnId) => {
+            showModal(`
+                <div style="text-align:center;">
+                    <h2 style="font-size:28px; margin-bottom:8px;">Verify Intake</h2>
+                    <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Scan the lender's device to release tokens.</p>
+                    <div id="reader-box" style="border-radius:24px; overflow:hidden; border:2px solid var(--accent-brand); box-shadow:var(--shadow-premium);"></div>
+                    <div style="margin-top:32px; display:flex; gap:12px;">
+                        <input type="text" id="m-pin" class="input-field" placeholder="Or enter manual code" style="border-radius:100px;">
+                        <button class="btn btn-primary" onclick="completeHandoff(document.getElementById('m-pin').value)">Verify</button>
+                    </div>
+                </div>
+            `);
+            window.qs = new Html5QrcodeScanner("reader-box", { fps: 10, qrbox: 200, disableFlip: false });
+            window.qs.render(text => completeHandoff(text));
+        };
+
+        window.completeHandoff = async (scannedId) => {
+            try {
+                await Store.verifyHandoff(scannedId);
+                alert("Successfully Verified. Smart Contract execution triggered to backend.");
+                hideModal(); router();
+            } catch(e) { alert("Verification failed."); }
+        };
+
+        initApp();
+    </script>
+</body>
+</html>
