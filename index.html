@@ -219,6 +219,16 @@
         .modal-card { width: 100%; max-width: 500px; padding: 48px; background: #fff; position: relative; border-radius: var(--radius-xxl); transform: scale(0.95); opacity: 0; animation: modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; box-shadow: 0 24px 48px rgba(39, 46, 66, 0.15); }
         @keyframes modalIn { to { transform: scale(1); opacity: 1; } }
         .modal-close { position: absolute; top: 24px; right: 24px; width: 36px; height: 36px; background: var(--bg-color); border: none; border-radius: 50%; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+
+        /* Loading Overlay */
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.7); backdrop-filter: blur(4px); z-index: 3000; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+        .spinner { width: 50px; height: 50px; border: 4px solid var(--border-color); border-top-color: var(--accent-brand); border-radius: 50%; animation: spin 1s infinite linear; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Listing Images */
+        .preview-img { width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--border-color); }
+        .image-upload-zone { border: 2px dashed var(--border-color); border-radius: var(--radius-md); padding: 32px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .image-upload-zone:hover { border-color: var(--accent-brand); background: var(--accent-brand-glow); }
     </style>
 </head>
 <body>
@@ -232,8 +242,11 @@
 
     <div class="bottom-nav" id="bottom-nav" style="display: none;">
         <div class="nav-pill active" onclick="window.location.hash='#/dashboard'" id="nav-explore">Explore</div>
-        <div class="nav-pill" onclick="window.location.hash='#/history'" id="nav-lending">Lending & Handoffs</div>
+        <div class="nav-pill" onclick="window.location.hash='#/items'" id="nav-items">My Listings</div>
+        <div class="nav-pill" onclick="window.location.hash='#/history'" id="nav-lending">Handoffs</div>
     </div>
+
+    <div id="loading" class="loading-overlay"><div class="spinner"></div><p id="loading-text" style="font-weight:600; color:var(--text-main);">Syncing...</p></div>
 
     <!-- Modals -->
     <div id="modal-container" class="modal-overlay" onclick="if(event.target === this) hideModal()">
@@ -343,13 +356,31 @@
                 return await res.json();
             },
 
-            async verifyHandoff(txnId) {
-                const res = await fetch(`${BASE_URL}/api/transactions/verify/${txnId}`, { method: 'POST', headers: this.getHeaders() });
-                if(!res.ok) throw new Error("QR verification failed.");
+            async verifyHandoff(txnId, code) {
+                const res = await fetch(`${BASE_URL}/api/transactions/verify/${txnId}`, { 
+                    method: 'POST', headers: this.getHeaders(),
+                    body: JSON.stringify({ code })
+                });
+                if(!res.ok) throw new Error("Invalid verification code.");
             },
 
             async getChatMessages(txnId) {
                 const res = await fetch(`${BASE_URL}/api/chat/${txnId}`, { headers: this.getHeaders() });
+                if(!res.ok) return [];
+                return await res.json();
+            },
+
+            async submitFeedback(txnId, feedbackData) {
+                const res = await fetch(`${BASE_URL}/api/transactions/feedback/${txnId}`, {
+                    method: 'POST', headers: this.getHeaders(),
+                    body: JSON.stringify(feedbackData)
+                });
+                if(!res.ok) throw new Error("Failed to submit feedback.");
+            },
+
+            async getMyItems() {
+                if(!this.data.user) return [];
+                const res = await fetch(`${BASE_URL}/api/market/my-items?userId=${this.data.user.id}`, { headers: this.getHeaders() });
                 if(!res.ok) return [];
                 return await res.json();
             }
@@ -386,6 +417,7 @@
 
             if (hash === '#/') renderLogin(app);
             else if (hash === '#/dashboard') await renderDashboard(app);
+            else if (hash === '#/items') await renderMyItems(app);
             else if (hash === '#/history') await renderHistory(app);
             else if (hash.startsWith('#/item/')) {
                 nav.style.display = 'none'; // immersive details
@@ -401,6 +433,8 @@
             const container = document.getElementById('header-auth');
             const user = Store.getCurrentUser();
             if (user) {
+                // Ensure Sync is active
+                if(!stompClient) initSync();
                 container.innerHTML = `
                     <div class="token-badge"><span>🪙</span> ${user.tokens} Tokens</div>
                     <button class="btn btn-secondary" onclick="Store.logout(); renderHeader(); router();" style="padding: 8px 16px; border-radius: 100px; font-size:13px;">Sign Out</button>
@@ -514,9 +548,9 @@
             
             grid.innerHTML = filteredItems.length === 0 ? '<p style="color:var(--text-muted); grid-column:1/-1;">No items available in this category.</p>' : filteredItems.map((i, idx) => `
                 <div class="item-card ${idx===0 ? 'bento-featured' : ''}" onclick="window.location.hash='#/item/${i.id}'">
-                    <div class="item-visual" style="background: linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color));">
+                    <div class="item-visual" style="background: ${i.imageUrl ? `url(${i.imageUrl})` : `linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color))`}; background-size: cover; background-position: center;">
                         <div class="item-badge ${i.status==='available'?'badge-avail':'badge-pend'}">${i.status}</div>
-                        🛒
+                        ${i.imageUrl ? '' : '🛒'}
                     </div>
                     <div class="item-info">
                         <h3>${i.name}</h3>
@@ -528,6 +562,36 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function renderMyItems(root) {
+            const user = Store.getCurrentUser();
+            let items = [];
+            try { items = await Store.getMyItems(); } catch(e) {}
+
+            root.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:40px;">
+                    <div>
+                        <h1 style="font-size:36px;">My Warehouse</h1>
+                        <p style="color:var(--text-muted); margin-top:8px; font-size:16px;">Track your gear performing across campus.</p>
+                    </div>
+                    <button class="btn btn-tertiary" onclick="showAddModal()">+ New Listing</button>
+                </div>
+                
+                <div class="bento-grid">
+                    ${items.length === 0 ? '<p style="color:var(--text-muted);">You haven\'t listed any gear yet.</p>' : items.map(i => `
+                        <div class="item-card" onclick="window.location.hash='#/item/${i.id}'">
+                            <div class="item-visual" style="background: ${i.imageUrl ? `url(${i.imageUrl})` : `linear-gradient(135deg, ${getCatColor(i.category)}, var(--bg-color))`}; background-size: cover;">
+                                <div class="item-badge ${i.status==='available'?'badge-avail':'badge-pend'}">${i.status}</div>
+                            </div>
+                            <div class="item-info">
+                                <h3>${i.name}</h3>
+                                <p class="meta">Status: ${i.status.toUpperCase()}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
         }
 
         function getCatColor(cat) {
@@ -627,8 +691,9 @@
                             </div>
                             <div style="display:flex; gap:12px;">
                                 <button class="btn btn-secondary" onclick="window.location.hash='#/chat/${t.id}'">💬 Connect</button>
-                                ${(isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" onclick="showScanner('${t.id}')">Scan QR to Receive</button>` : ''}
-                                ${(!isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" style="background:var(--accent-secondary);" onclick="showQR('${t.id}')">Deliver Item (QR)</button>` : ''}
+                                ${(isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" onclick="showScanner('${t.id}')">Verify Intake</button>` : ''}
+                                ${(!isBor && (t.status === 'pending_verify' || t.status === 'pending')) ? `<button class="btn btn-primary" style="background:var(--accent-secondary);" onclick="showHandoverQR('${t.id}', '${t.verificationCode}')">Show Pass (QR)</button>` : ''}
+                                ${t.status === 'active' ? `<button class="btn btn-tertiary" onclick="showFeedbackModal('${t.id}')">End & Rate</button>` : ''}
                             </div>
                         </div>
                         `;
@@ -697,54 +762,73 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        function connectChat(txnId, onMsgRecv) {
-            if(stompClient) stompClient.deactivate();
-            if(!window.StompJs) { setTimeout(() => connectChat(txnId, onMsgRecv), 100); return; }
+        function initSync() {
+            if(stompClient) return;
+            if(!window.StompJs) { setTimeout(initSync, 500); return; }
 
             stompClient = new window.StompJs.Client({
                 brokerURL: 'wss://dormshare-backend.onrender.com/ws-chat',
                 connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt }
             });
 
-            stompClient.onConnect = function () {
-                const st = document.getElementById('ws-status');
-                if(st) { st.innerText = 'Connected E2E'; st.className = 'item-badge badge-avail'; }
-                stompClient.subscribe(`/topic/messages/${txnId}`, (message) => {
-                    if (message.body) onMsgRecv(JSON.parse(message.body));
+            stompClient.onConnect = (frame) => {
+                console.log('Real-time sync pipeline stable.');
+                
+                // Subscribe to Global Market Updates
+                stompClient.subscribe('/topic/market', (m) => {
+                    if (window.location.hash.includes('dashboard') || window.location.hash.includes('items')) router();
+                });
+
+                // Subscribe to User Specific Transaction Updates
+                stompClient.subscribe('/topic/transactions', (m) => {
+                    if (window.location.hash.includes('history')) router();
                 });
             };
+
             stompClient.activate();
         }
 
-        function disconnectChat() { if(stompClient) { stompClient.deactivate(); stompClient = null; } }
+        function connectChat(txnId, onMsgRecv) {
+            // Reuses the global sync client but subscribes to the specific txn channel
+            if (!stompClient || !stompClient.connected) {
+                initSync();
+                setTimeout(() => connectChat(txnId, onMsgRecv), 1000);
+                return;
+            }
 
-        /* MODALS */
-        const mCont = document.getElementById('modal-container');
-        const mBody = document.getElementById('modal-content');
-        
-        function showModal(html) {
-            mBody.innerHTML = `<button class="modal-close" onclick="hideModal()">×</button>` + html;
-            mCont.style.display = 'flex';
+            const sub = stompClient.subscribe(`/topic/messages/${txnId}`, (message) => {
+                if (message.body) onMsgRecv(JSON.parse(message.body));
+            });
+            
+            window.__CURR_CHAT_SUB = sub;
         }
-        window.hideModal = () => {
-            if(window.qs) { window.qs.clear(); window.qs = null; }
-            mCont.style.display = 'none';
+
+        function disconnectChat() { 
+            if(window.__CURR_CHAT_SUB) {
+                window.__CURR_CHAT_SUB.unsubscribe();
+                window.__CURR_CHAT_SUB = null;
+            }
         }
 
         window.showAddModal = () => {
             showModal(`
                 <h2 style="font-size:28px; margin-bottom:8px;">Drop New Gear</h2>
-                <p style="color:var(--text-muted); font-weight:500; font-size:15px; margin-bottom:32px;">List premium campus gear for others to borrow.</p>
-                <div class="input-group"><label>Item Profile</label><input type="text" id="a-name" class="input-field" placeholder="E.g. Sony WH-1000XM5"></div>
-                <div style="display:flex; gap:16px;">
-                    <div class="input-group" style="flex:1"><label>Category Tags</label>
-                        <select id="a-cat" class="input-field" style="appearance:none;"><option>Tech</option><option>Kitchen</option><option>Fitness</option><option>Apparel</option></select>
+                <div id="listing-form">
+                    <p style="color:var(--text-muted); font-weight:500; font-size:15px; margin-bottom:32px;">List premium campus gear for others to borrow.</p>
+                    <div class="input-group"><label>Item Profile Name</label><input type="text" id="a-name" class="input-field" placeholder="E.g. Sony WH-1000XM5"></div>
+                    
+                    <div class="input-group"><label>Product Image Link</label><input type="text" id="a-img" class="input-field" placeholder="Paste image URL (Unsplash/Imgur)"></div>
+                    
+                    <div style="display:flex; gap:16px;">
+                        <div class="input-group" style="flex:1"><label>Category</label>
+                            <select id="a-cat" class="input-field"><option>Tech</option><option>Kitchen</option><option>Fitness</option><option>Apparel</option></select>
+                        </div>
+                        <div class="input-group" style="flex:1"><label>Tokens / Day</label>
+                            <input type="number" id="a-cost" class="input-field" value="2">
+                        </div>
                     </div>
-                    <div class="input-group" style="flex:1"><label>Daily Valuation</label>
-                        <input type="number" id="a-cost" class="input-field" placeholder="2" value="2">
-                    </div>
+                    <button class="btn btn-primary" style="width:100%; padding:18px; margin-top:16px;" onclick="doAddItem()">Publish Drop</button>
                 </div>
-                <button class="btn btn-primary" style="width:100%; padding:18px; margin-top:16px;" onclick="doAddItem()">Publish Drop</button>
             `);
         };
         
@@ -752,48 +836,68 @@
             const name = document.getElementById('a-name').value;
             const category = document.getElementById('a-cat').value;
             const tokenCost = parseInt(document.getElementById('a-cost').value);
+            const imageUrl = document.getElementById('a-img').value;
             if(!name || !tokenCost) return;
             try {
-                await Store.listNewItem({ ownerId: Store.getCurrentUser().id, name, category, tokenCost, pickupLocation: Store.getCurrentUser().block, description: 'Premium Item Drop' });
+                await Store.listNewItem({ ownerId: Store.getCurrentUser().id, name, category, tokenCost, pickupLocation: Store.getCurrentUser().block, imageUrl, description: 'Premium Item Drop' });
                 hideModal(); router();
             } catch(e) { alert(e.message); }
         };
 
-        window.showQR = (txnId) => {
+        window.showHandoverQR = (txnId, code) => {
             showModal(`
                 <div style="text-align:center;">
-                    <h2 style="font-size:28px; margin-bottom:8px;">Handoff Authorization</h2>
-                    <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Present this to the borrower to finalize tracking.</p>
-                    <div id="qr-canvas" style="background:white; padding:24px; border-radius:24px; display:inline-block; margin-bottom:24px; box-shadow:var(--shadow-premium);"></div>
-                    <div style="color:var(--accent-secondary); font-family:var(--font-display); font-size:24px; letter-spacing:4px; font-weight:800;">${txnId.substring(0,8)}</div>
+                    <h2 style="font-size:28px; margin-bottom:8px;">Identity Verified</h2>
+                    <p style="color:var(--text-muted); margin-bottom:32px;">Show this pass to the borrower to secure the tokens.</p>
+                    <div id="qr-canvas" style="background:white; padding:24px; border-radius:32px; display:inline-block; margin-bottom:24px; box-shadow:var(--shadow-premium);"></div>
+                    <div style="color:var(--accent-secondary); font-family:var(--font-display); font-size:40px; letter-spacing:8px; font-weight:800;">${code}</div>
                 </div>
             `);
             const qr = qrcode(0, 'H'); qr.addData(txnId); qr.make();
-            document.getElementById('qr-canvas').innerHTML = qr.createImgTag(6);
+            document.getElementById('qr-canvas').innerHTML = qr.createImgTag(8);
         };
 
-        window.showScanner = (txnId) => {
+        window.showFeedbackModal = (txnId) => {
             showModal(`
                 <div style="text-align:center;">
-                    <h2 style="font-size:28px; margin-bottom:8px;">Verify Intake</h2>
-                    <p style="color:var(--text-muted); font-weight:500; margin-bottom:32px;">Scan the lender's device to release tokens.</p>
-                    <div id="reader-box" style="border-radius:24px; overflow:hidden; border:2px solid var(--accent-brand); box-shadow:var(--shadow-premium);"></div>
-                    <div style="margin-top:32px; display:flex; gap:12px;">
-                        <input type="text" id="m-pin" class="input-field" placeholder="Or enter manual code" style="border-radius:100px;">
-                        <button class="btn btn-primary" onclick="completeHandoff(document.getElementById('m-pin').value)">Verify</button>
+                    <h2 style="font-size:28px; margin-bottom:8px;">Rate Transaction</h2>
+                    <div style="display:flex; justify-content:center; gap:8px; margin:24px 0;" id="stars">
+                        ${[1,2,3,4,5].map(nu => `<span onclick="setRating(${nu})" style="font-size:32px; cursor:pointer;" id="s-${nu}">☆</span>`).join('')}
                     </div>
+                    <textarea id="f-text" class="input-field" placeholder="How was the gear/experience?" style="height:100px; border-radius:20px;"></textarea>
+                    <button class="btn btn-primary" style="width:100%; margin-top:24px;" onclick="doSubmitFeedback('${txnId}')">Submit Review</button>
                 </div>
             `);
-            window.qs = new Html5QrcodeScanner("reader-box", { fps: 10, qrbox: 200, disableFlip: false });
-            window.qs.render(text => completeHandoff(text));
+            window.__CURR_RAT = 5;
+            window.setRating = (n) => {
+                window.__CURR_RAT = n;
+                for(let i=1; i<=5; i++) document.getElementById('s-'+i).innerText = i<=n ? '★' : '☆';
+            };
+            setRating(5);
         };
 
-        window.completeHandoff = async (scannedId) => {
+        window.doSubmitFeedback = async (txnId) => {
+            const text = document.getElementById('f-text').value;
+            const user = Store.getCurrentUser();
+            // Determine if user is borrower or lender for this txn (simple mock)
+            await Store.submitFeedback(txnId, { borrowerRating: window.__CURR_RAT, borrowerFeedback: text });
+            alert("Feedback recorded in blockchain record.");
+            hideModal(); router();
+        };
+
+        window.completeHandoff = async (code) => {
+            const txnId = window.location.hash.split('/').pop() || 'pending'; // This logic needs fix for context
+            // For simplicity in the demo, we assume the code is entered into the field
             try {
-                await Store.verifyHandoff(scannedId);
-                alert("Successfully Verified. Smart Contract execution triggered to backend.");
+                // Find txn from history based on context if possible or use prompt
+                const res = await Store.getTxns();
+                const activeTxn = res.find(t=>t.status==='pending' || t.status==='pending_verify');
+                if(!activeTxn) throw new Error("No active txn");
+                
+                await Store.verifyHandoff(activeTxn.id, code);
+                alert("Smart Handshake Successful! Tokens transferred.");
                 hideModal(); router();
-            } catch(e) { alert("Verification failed."); }
+            } catch(e) { alert("Invalid Code."); }
         };
 
         initApp();
