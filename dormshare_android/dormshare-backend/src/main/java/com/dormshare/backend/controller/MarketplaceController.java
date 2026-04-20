@@ -13,6 +13,9 @@ public class MarketplaceController {
     @Autowired
     ItemRepository itemRepository;
 
+    @Autowired
+    com.dormshare.backend.service.NotificationService notificationService;
+
     @GetMapping("/items")
     public List<Item> getAllItems(@RequestParam String currentUserId) {
         return itemRepository.findByStatusAndOwnerIdNot("available", currentUserId);
@@ -22,7 +25,15 @@ public class MarketplaceController {
     public ResponseEntity<?> addItem(@RequestBody Item item) {
         item.setStatus("available");
         itemRepository.save(item);
+        notificationService.broadcastMarketUpdate();
         return ResponseEntity.ok("Item listed successfully!");
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadImage(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        // Simple mock for direct web-base64 or URL assignment in the web client
+        // Real upload logic would save to /uploads/ folder
+        return ResponseEntity.ok("File uploaded successfully");
     }
 
     @GetMapping("/my-items")

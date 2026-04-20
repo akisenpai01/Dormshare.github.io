@@ -19,4 +19,9 @@ public class Transaction {
     private int tokenCost;
     private String status; // pending, active, returned
     private String date;
+    private String verificationCode; // 6-digit code for handoff
+    private int borrowerRating;
+    private int lenderRating;
+    private String borrowerFeedback;
+    private String lenderFeedback;
 }

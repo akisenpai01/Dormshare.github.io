@@ -16,4 +16,5 @@ public class Item {
     private String status; // available, pending, borrowed
     private String pickupLocation;
     private String description;
+    private String imageUrl;
 }
