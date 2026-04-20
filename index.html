@@ -242,7 +242,7 @@
 
     <!-- UI State and Global Store -->
     <script>
-        const BASE_URL = 'https://1e9f0f90923b2763-223-188-4-111.serveousercontent.com';
+        const BASE_URL = 'https://dormshare-backend.onrender.com';
         let stompClient = null;
 
         const Store = {
@@ -702,7 +702,7 @@
             if(!window.StompJs) { setTimeout(() => connectChat(txnId, onMsgRecv), 100); return; }
 
             stompClient = new window.StompJs.Client({
-                brokerURL: 'wss://1e9f0f90923b2763-223-188-4-111.serveousercontent.com/ws-chat',
+                brokerURL: 'wss://dormshare-backend.onrender.com/ws-chat',
                 connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt }
             });
 
