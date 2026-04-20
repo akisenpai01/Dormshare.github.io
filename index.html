@@ -242,7 +242,7 @@
 
     <!-- UI State and Global Store -->
     <script>
-        const BASE_URL = 'http://localhost:8082';
+        const BASE_URL = 'https://9c96e87ad30368.lhr.life';
         let stompClient = null;
 
         const Store = {
@@ -702,7 +702,7 @@
             if(!window.StompJs) { setTimeout(() => connectChat(txnId, onMsgRecv), 100); return; }
 
             stompClient = new window.StompJs.Client({
-                brokerURL: 'ws://localhost:8082/ws-chat',
+                brokerURL: 'wss://9c96e87ad30368.lhr.life/ws-chat',
                 connectHeaders: { Authorization: 'Bearer ' + Store.data.jwt }
             });
 
