@@ -280,26 +280,24 @@
                 return h;
             },
             
+            async signup(name, email, pass, block) {
+                const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+                    method: 'POST', headers: this.getHeaders(),
+                    body: JSON.stringify({ name, email, password: pass, hostelBlock: block })
+                });
+                if(!res.ok) {
+                    const text = await res.text();
+                    throw new Error(text || "Sign up failed");
+                }
+            },
+            
             async login(email, pass) {
                 try {
                     let res = await fetch(`${BASE_URL}/api/auth/signin`, {
                         method: 'POST', headers: this.getHeaders(),
                         body: JSON.stringify({ email, password: pass })
                     });
-
-                    if (!res.ok && email.includes('@stu.upes.ac.in')) {
-                        const signupRes = await fetch(`${BASE_URL}/api/auth/signup`, {
-                            method: 'POST', headers: this.getHeaders(),
-                            body: JSON.stringify({ name: email.split('@')[0], email: email, password: pass, hostelBlock: 'Campus' })
-                        });
-                        if(signupRes.ok) {
-                            res = await fetch(`${BASE_URL}/api/auth/signin`, {
-                                method: 'POST', headers: this.getHeaders(),
-                                body: JSON.stringify({ email, password: pass })
-                            });
-                        }
-                    }
-                    if(!res.ok) throw new Error("Invalid credentials");
+                    if(!res.ok) throw new Error("Invalid credentials or unregistered");
                     const data = await res.json();
                     
                     const u = {
@@ -413,12 +411,27 @@
         }
 
         function renderLogin(root) {
+            window.__AUTH_MODE = window.__AUTH_MODE || 'login';
+            const isLogin = window.__AUTH_MODE === 'login';
+            
             root.innerHTML = `
                 <div class="flagship-card auth-wrap">
-                    <h1 style="color:var(--text-main); font-size:32px;">Welcome to DormShare</h1>
-                    <p style="color:var(--text-muted); margin-bottom:40px; font-weight:500;">Your Premium Campus Marketplace.</p>
+                    <h1 style="color:var(--text-main); font-size:32px;">${isLogin ? 'Welcome Back' : 'Create Account'}</h1>
+                    <p style="color:var(--text-muted); margin-bottom:40px; font-weight:500;">${isLogin ? 'Log in to the Campus Marketplace.' : 'Join DormShare and start trading.'}</p>
                     
                     <div id="auth-err" style="color:var(--danger); margin-bottom:16px; font-size:14px; font-weight:600;"></div>
+                    
+                    ${!isLogin ? `
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input id="fname" type="text" class="input-field" placeholder="John Doe" />
+                    </div>
+                    <div class="input-group">
+                        <label>Hostel Block</label>
+                        <input id="block" type="text" class="input-field" placeholder="E.g. Block A" />
+                    </div>
+                    ` : ''}
+
                     <div class="input-group">
                         <label>Student Email</label>
                         <input id="email" type="email" class="input-field" placeholder="student@stu.upes.ac.in" />
@@ -427,17 +440,49 @@
                         <label>Password</label>
                         <input id="pass" type="password" class="input-field" placeholder="••••••••" />
                     </div>
-                    <button id="login-btn" class="btn btn-primary" style="width:100%; margin-top:16px; font-size:16px; padding:18px;" onclick="doLogin()">Log In Securely</button>
+
+                    <button id="auth-btn" class="btn btn-primary" style="width:100%; margin-top:16px; font-size:16px; padding:18px;" onclick="doAuth()">
+                        ${isLogin ? 'Log In Securely' : 'Register Account'}
+                    </button>
+
+                    <p style="margin-top:24px; font-size:14px; color:var(--text-muted); cursor:pointer;" onclick="toggleAuthMode()">
+                        ${isLogin ? "Don't have an account? <b style='color:var(--accent-brand)'>Sign up</b>" : "Already have an account? <b style='color:var(--accent-brand)'>Log in</b>"}
+                    </p>
                 </div>
             `;
-            window.doLogin = async () => {
-                const btn = document.getElementById('login-btn');
-                btn.innerText = 'Authenticating...';
+
+            window.toggleAuthMode = () => {
+                window.__AUTH_MODE = window.__AUTH_MODE === 'login' ? 'signup' : 'login';
+                router();
+            };
+
+            window.doAuth = async () => {
+                const btn = document.getElementById('auth-btn');
+                const err = document.getElementById('auth-err');
+                err.innerText = '';
+                btn.innerText = 'Processing...';
+                
                 try {
-                    await Store.login(document.getElementById('email').value, document.getElementById('pass').value);
-                    renderHeader(); router();
-                } catch(e) { document.getElementById('auth-err').innerText = e.message; btn.innerText = 'Log In Securely'; }
-            }
+                    const email = document.getElementById('email').value;
+                    const pass = document.getElementById('pass').value;
+                    
+                    if(window.__AUTH_MODE === 'signup') {
+                        const name = document.getElementById('fname').value;
+                        const block = document.getElementById('block').value;
+                        if(!name || !email || !pass || !block) throw new Error("All fields are required.");
+                        await Store.signup(name, email, pass, block);
+                        alert("Account created successfully! Please log in.");
+                        window.toggleAuthMode();
+                        return;
+                    } else {
+                        await Store.login(email, pass);
+                        renderHeader(); router();
+                    }
+                } catch(e) { 
+                    err.innerText = e.message; 
+                    btn.innerText = window.__AUTH_MODE === 'login' ? 'Log In Securely' : 'Register Account'; 
+                }
+            };
         }
 
         async function renderDashboard(root) {
