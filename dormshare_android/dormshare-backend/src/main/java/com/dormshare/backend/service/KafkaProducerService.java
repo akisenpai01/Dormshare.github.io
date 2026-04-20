@@ -9,10 +9,12 @@ import org.springframework.stereotype.Service;
 public class KafkaProducerService {
     private static final String TOPIC = "handoff-events";
 
-    @Autowired
+    @Autowired(required = false)
     private KafkaTemplate<String, Object> kafkaTemplate;
 
     public void sendHandoffEvent(Transaction transaction) {
-        kafkaTemplate.send(TOPIC, transaction);
+        if (kafkaTemplate != null) {
+            kafkaTemplate.send(TOPIC, transaction);
+        }
     }
 }
