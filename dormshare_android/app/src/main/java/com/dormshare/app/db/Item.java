@@ -17,8 +17,9 @@ public class Item {
     public String status; // available, pending, borrowed
     public String pickupLocation;
     public String description;
+    public String imageUrl;
 
-    public Item(@NonNull String id, String ownerId, String name, String category, String condition, int tokenCost, String status, String pickupLocation, String description) {
+    public Item(@NonNull String id, String ownerId, String name, String category, String condition, int tokenCost, String status, String pickupLocation, String description, String imageUrl) {
         this.id = id;
         this.ownerId = ownerId;
         this.name = name;
@@ -28,5 +29,6 @@ public class Item {
         this.status = status;
         this.pickupLocation = pickupLocation;
         this.description = description;
+        this.imageUrl = imageUrl;
     }
 }

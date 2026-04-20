@@ -17,4 +17,5 @@ public class Item {
     private String pickupLocation;
     private String description;
     private String imageUrl;
+    private double ownerReputation;
 }

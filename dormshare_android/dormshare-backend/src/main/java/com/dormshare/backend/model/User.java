@@ -15,6 +15,7 @@ public class User {
     private String hostelBlock;
     private int tokens;
     private double trustScore;
+    private int totalTrades;
 
     public User(String name, String email, String password, String hostelBlock) {
         this.name = name;
@@ -23,5 +24,6 @@ public class User {
         this.hostelBlock = hostelBlock;
         this.tokens = 10;
         this.trustScore = 5.0;
+        this.totalTrades = 0;
     }
 }

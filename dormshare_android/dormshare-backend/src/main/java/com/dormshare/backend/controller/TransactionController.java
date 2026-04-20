@@ -1,9 +1,11 @@
 package com.dormshare.backend.controller;
 
-import com.dormshare.backend.model.Item;
-import com.dormshare.backend.model.Transaction;
+import com.dormshare.backend.model.TokenTransaction;
+import com.dormshare.backend.model.User;
 import com.dormshare.backend.repository.ItemRepository;
+import com.dormshare.backend.repository.TokenTransactionRepository;
 import com.dormshare.backend.repository.TransactionRepository;
+import com.dormshare.backend.repository.UserRepository;
 import com.dormshare.backend.service.KafkaProducerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +17,10 @@ import java.util.Optional;
 @RequestMapping("/api/transactions")
 public class TransactionController {
     @Autowired
-    TransactionRepository transactionRepository;
+    UserRepository userRepository;
 
     @Autowired
-    ItemRepository itemRepository;
+    TokenTransactionRepository tokenTransactionRepository;
 
     @Autowired
     KafkaProducerService kafkaProducerService;
@@ -65,6 +67,21 @@ public class TransactionController {
             }
 
             kafkaProducerService.sendHandoffEvent(tx.get());
+
+            // Wallet Logic: Record Token Transaction
+            tokenTransactionRepository.save(new TokenTransaction(
+                tx.get().getBorrowerId(), tx.get().getTokenCost(), "SPEND", 
+                "Borrowed gear: " + id, tx.get().getId()
+            ));
+            tokenTransactionRepository.save(new TokenTransaction(
+                tx.get().getLenderId(), tx.get().getTokenCost(), "EARN", 
+                "Lent gear: " + id, tx.get().getId()
+            ));
+
+            // Increase Transaction Counts
+            userRepository.findById(tx.get().getBorrowerId()).ifPresent(u -> { u.setTotalTrades(u.getTotalTrades()+1); userRepository.save(u); });
+            userRepository.findById(tx.get().getLenderId()).ifPresent(u -> { u.setTotalTrades(u.getTotalTrades()+1); userRepository.save(u); });
+
             notificationService.broadcastTransactionUpdate();
             notificationService.broadcastMarketUpdate();
 
@@ -84,6 +101,20 @@ public class TransactionController {
             if (feedback.getLenderRating() > 0) tx.get().setLenderRating(feedback.getLenderRating());
             
             transactionRepository.save(tx.get());
+
+            // Update Reputation Logic
+            String subjectId = (feedback.getLenderRating() > 0) ? tx.get().getLenderId() : tx.get().getBorrowerId();
+            int newRating = (feedback.getLenderRating() > 0) ? feedback.getLenderRating() : feedback.getBorrowerRating();
+            
+            userRepository.findById(subjectId).ifPresent(u -> {
+                double currentScore = u.getTrustScore();
+                int total = u.getTotalTrades();
+                // Weighted average: simplified simulation
+                double newScore = ((currentScore * 4) + newRating) / 5.0; 
+                u.setTrustScore(newScore);
+                userRepository.save(u);
+            });
+
             notificationService.broadcastTransactionUpdate();
             return ResponseEntity.ok("Feedback submitted");
         }
@@ -93,5 +124,25 @@ public class TransactionController {
     @GetMapping("/history")
     public List<Transaction> getHistory(@RequestParam String userId) {
         return transactionRepository.findByBorrowerIdOrLenderId(userId, userId);
+    }
+
+    @PostMapping("/return/{id}")
+    public ResponseEntity<?> returnItem(@PathVariable String id) {
+        Optional<Transaction> tx = transactionRepository.findById(id);
+        if (tx.isPresent()) {
+            tx.get().setStatus("returned");
+            transactionRepository.save(tx.get());
+            
+            // Update item status back to available
+            itemRepository.findById(tx.get().getItemId()).ifPresent(i -> {
+                i.setStatus("available");
+                itemRepository.save(i);
+            });
+            
+            notificationService.broadcastTransactionUpdate();
+            notificationService.broadcastMarketUpdate();
+            return ResponseEntity.ok("Item returned");
+        }
+        return ResponseEntity.badRequest().body("Transaction not found");
     }
 }

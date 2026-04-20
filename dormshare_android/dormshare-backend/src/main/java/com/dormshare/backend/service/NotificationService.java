@@ -16,4 +16,8 @@ public class NotificationService {
     public void broadcastTransactionUpdate() {
         messagingTemplate.convertAndSend("/topic/transactions", "DATA_UPDATE");
     }
+
+    public void sendTargetedNotification(String userId, Object payload) {
+        messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", payload);
+    }
 }

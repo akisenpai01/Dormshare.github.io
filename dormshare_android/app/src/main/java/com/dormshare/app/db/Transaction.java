@@ -15,8 +15,13 @@ public class Transaction {
     public int tokenCost;
     public String status; // pending_verify, active, returned
     public String date;
+    public String verificationCode;
+    public int borrowerRating;
+    public int lenderRating;
+    public String borrowerFeedback;
+    public String lenderFeedback;
 
-    public Transaction(@NonNull String id, String itemId, String borrowerId, String lenderId, int tokenCost, String status, String date) {
+    public Transaction(@NonNull String id, String itemId, String borrowerId, String lenderId, int tokenCost, String status, String date, String verificationCode, int borrowerRating, int lenderRating, String borrowerFeedback, String lenderFeedback) {
         this.id = id;
         this.itemId = itemId;
         this.borrowerId = borrowerId;
@@ -24,5 +29,10 @@ public class Transaction {
         this.tokenCost = tokenCost;
         this.status = status;
         this.date = date;
+        this.verificationCode = verificationCode;
+        this.borrowerRating = borrowerRating;
+        this.lenderRating = lenderRating;
+        this.borrowerFeedback = borrowerFeedback;
+        this.lenderFeedback = lenderFeedback;
     }
 }

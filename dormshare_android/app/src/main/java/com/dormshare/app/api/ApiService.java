@@ -35,7 +35,10 @@ public interface ApiService {
     Call<com.dormshare.app.db.Transaction> requestItem(@Header("Authorization") String token, @Body com.dormshare.app.db.Transaction tx);
 
     @POST("api/transactions/verify/{id}")
-    Call<Void> verifyHandoff(@Header("Authorization") String token, @Path("id") String txId);
+    Call<Void> verifyHandoff(@Header("Authorization") String token, @Path("id") String txId, @Body Map<String, String> body);
+
+    @POST("api/transactions/feedback/{id}")
+    Call<Void> submitFeedback(@Header("Authorization") String token, @Path("id") String txId, @Body com.dormshare.app.db.Transaction feedback);
 
     @GET("api/transactions/history")
     Call<List<com.dormshare.app.db.Transaction>> getHistory(@Header("Authorization") String token, @Query("userId") String userId);
@@ -46,4 +49,8 @@ public interface ApiService {
     @Multipart
     @POST("api/chat/image")
     Call<ResponseBody> uploadChatImage(@Header("Authorization") String token, @Part MultipartBody.Part file);
+
+    @Multipart
+    @POST("api/market/upload")
+    Call<Map<String, String>> uploadMarketImage(@Header("Authorization") String token, @Part MultipartBody.Part file);
 }
